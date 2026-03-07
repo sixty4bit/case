@@ -8,11 +8,28 @@ Inspired by [harness engineering](https://openai.com/index/harness-engineering/)
 
 ### Install the plugin
 
-Add case as a Claude Code plugin so `/case` is available from any repo:
+Add case as a Claude Code plugin so `/case` is available in your sessions:
 
+**Option A: Per-session (no install)**
 ```bash
-claude mcp add --transport stdio case -- cat /dev/null
-# Or add manually to ~/.claude/plugins/ pointing to this repo
+claude --plugin-dir /path/to/case
+```
+
+**Option B: Persistent (add to settings)**
+
+Add to `~/.claude/settings.json`:
+```json
+{
+  "pluginDirs": ["/path/to/case"]
+}
+```
+
+**Option C: Marketplace (for team distribution)**
+
+If case is published as a marketplace:
+```bash
+claude plugin marketplace add /path/to/case
+claude plugin install case
 ```
 
 ### Use interactively
