@@ -29,13 +29,16 @@ Load harness context for the current task. Follow the Task Routing table below.
 7. Open a PR linking the issue: `gh pr create --body "Closes #34"`
 
 **Linear issue ID** — `/case DX-1234`
-1. Use the Linear MCP tools to fetch the issue: `get_issue` with ID `DX-1234`
-2. Read the issue title, description, and any comments for context
+1. Try the Linear MCP tools first (available via claude.ai integration):
+   - Use `mcp__claude_ai_Linear__get_issue` with the issue ID
+   - Read title, description, comments, status, and assignee
+2. If Linear MCP tools are not available, ask the user to paste the issue details using `AskUserQuestion`
 3. Determine the target repo from the issue content or current working directory
 4. Route to the appropriate playbook based on issue content
 5. Create a feature branch: `git checkout -b fix/DX-1234`
 6. Execute the work, following all rules below
 7. Open a PR referencing the Linear issue in the body
+8. Update the Linear issue status if MCP tools are available: `mcp__claude_ai_Linear__save_issue`
 
 **How to detect argument type:**
 - Matches `/^\d+$/` → GitHub issue number (e.g., `34`, `142`)
