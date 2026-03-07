@@ -8,6 +8,11 @@ description: WorkOS OSS harness — cross-repo orchestration, conventions, playb
 You are operating within the Case harness for WorkOS open source projects.
 Humans steer. Agents execute. When agents struggle, fix the harness.
 
+## Rules
+
+- **Always use `AskUserQuestion` tool when asking the user questions.** Do not ask questions in plain text. The tool provides structured options and ensures the user can respond clearly.
+- **Always work in feature branches.** Never commit directly to main. Use `claude --worktree` or create a branch before starting work.
+
 ## Always Load
 
 Read these first for landscape and rules:
@@ -55,10 +60,11 @@ Format spec: `../../tasks/README.md`
 
 Before making changes in any target repo:
 
-1. Read that repo's `CLAUDE.md` or `CLAUDE.local.md` for project-specific instructions
-2. Run `../../scripts/bootstrap.sh {repo-name}` to verify readiness
-3. Follow the repo's PR checklist before opening a PR
-4. Run `../../scripts/check.sh --repo {repo-name}` to verify conventions
+1. Create a feature branch (or use `claude --worktree` for isolated work)
+2. Read that repo's `CLAUDE.md` or `CLAUDE.local.md` for project-specific instructions
+3. Run `../../scripts/bootstrap.sh {repo-name}` to verify readiness
+4. Follow the repo's PR checklist before opening a PR
+5. Run `../../scripts/check.sh --repo {repo-name}` to verify conventions
 
 ## Improving the Harness
 

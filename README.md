@@ -73,29 +73,32 @@ cp tasks/templates/bug-fix.md tasks/active/authkit-nextjs-1-fix-cookie-bug.md
 
 ### 3. Hand it to an agent
 
+Use `--worktree` so the agent works in an isolated branch:
+
 ```bash
-claude -p "Execute the task in tasks/active/authkit-nextjs-1-fix-cookie-bug.md"
+claude --worktree -p "Execute the task in tasks/active/authkit-nextjs-1-fix-cookie-bug.md"
 ```
 
-Or open Claude Code and point it at the task:
+Or open Claude Code interactively with a worktree:
 
-```
+```bash
+claude --worktree
 > Read and execute tasks/active/authkit-nextjs-1-fix-cookie-bug.md
 ```
 
 ### 4. Run multiple in parallel
 
-Open separate terminals, each running a different task:
+Each agent gets its own worktree — no conflicts:
 
 ```bash
 # Terminal 1
-claude -p "Execute tasks/active/cli-1-add-widgets.md"
+claude --worktree -p "Execute tasks/active/cli-1-add-widgets.md"
 
 # Terminal 2
-claude -p "Execute tasks/active/authkit-nextjs-1-fix-cookie-bug.md"
+claude --worktree -p "Execute tasks/active/authkit-nextjs-1-fix-cookie-bug.md"
 
 # Terminal 3
-claude -p "Execute tasks/active/x-1-update-readme-badges.md"
+claude --worktree -p "Execute tasks/active/x-1-update-readme-badges.md"
 ```
 
 ### 5. Review PRs

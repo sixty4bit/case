@@ -3,6 +3,11 @@
 Case is a spine/meta-repo for orchestrating agent work across WorkOS open source projects.
 It provides the cross-cutting knowledge, conventions, and task dispatch that no single repo owns.
 
+## Rules
+
+- **Always use `AskUserQuestion` tool** when asking questions. Never ask questions in plain text.
+- **Always work in feature branches.** Never commit to main. Use `claude --worktree` for isolated work.
+
 ## Philosophy
 
 - **Humans steer, agents execute.** Nick defines goals and acceptance criteria. Agents implement.
@@ -21,7 +26,7 @@ It provides the cross-cutting knowledge, conventions, and task dispatch that no 
 - The /case Claude Code plugin skill
 
 **In individual repos:**
-- AGENTS.md with repo-specific instructions
+- CLAUDE.md (or CLAUDE.local.md) with repo-specific instructions
 - Repo-specific CI, linters, test config
 - Code and tests
 
