@@ -1,6 +1,7 @@
 ---
 name: case
 description: WorkOS OSS harness — cross-repo orchestration, conventions, playbooks, and task dispatch. Use when working across WorkOS open source repos or when you need harness context.
+argument-hint: "[issue-number] or [LINEAR-ID]"
 ---
 
 # Case — WorkOS OSS Harness
