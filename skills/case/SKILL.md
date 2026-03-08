@@ -23,10 +23,18 @@ Load harness context for the current task. Follow the Task Routing table below.
 1. Detect the current repo from the working directory (`git remote get-url origin`)
 2. Fetch the issue: `gh issue view 34 --json title,body,labels,comments`
 3. Read the issue title, body, and comments to understand the task
-4. Route to the appropriate playbook based on issue content (bug → fix-bug, feature → architecture doc + playbook)
-5. Create a feature branch named after the issue: `git checkout -b fix/issue-34`
-6. Execute the work, following all rules below
-7. Open a PR linking the issue: `gh pr create --body "Closes #34"`
+4. **Create a task file** in `/Users/nicknisi/Developer/case/tasks/active/`:
+   - Derive repo name from the remote (e.g., `authkit-nextjs`)
+   - Find the next sequential number: count existing `{repo}-*.md` files + 1
+   - Filename: `{repo}-{n}-issue-{number}.md` (e.g., `authkit-nextjs-1-issue-34.md`)
+   - Use the bug-fix template from `/Users/nicknisi/Developer/case/tasks/templates/bug-fix.md`
+   - Fill in: objective from issue title/body, target repo, acceptance criteria from issue, checklist from the routed playbook
+5. Route to the appropriate playbook based on issue content (bug → fix-bug, feature → architecture doc + playbook)
+6. Create a feature branch named after the issue: `git checkout -b fix/issue-34`
+7. **Update the task file** checklist as you work — check items off as they're completed
+8. Execute the work, following all rules below
+9. Open a PR linking the issue: `gh pr create --body "Closes #34"`
+10. **Move the task file** to `/Users/nicknisi/Developer/case/tasks/done/` after PR is opened
 
 **Linear issue ID** — `/case DX-1234`
 1. Try the Linear MCP tools first (available via claude.ai integration):
@@ -34,11 +42,19 @@ Load harness context for the current task. Follow the Task Routing table below.
    - Read title, description, comments, status, and assignee
 2. If Linear MCP tools are not available, ask the user to paste the issue details using `AskUserQuestion`
 3. Determine the target repo from the issue content or current working directory
-4. Route to the appropriate playbook based on issue content
-5. Create a feature branch: `git checkout -b fix/DX-1234`
-6. Execute the work, following all rules below
-7. Open a PR referencing the Linear issue in the body
-8. Update the Linear issue status if MCP tools are available: `mcp__claude_ai_Linear__save_issue`
+4. **Create a task file** in `/Users/nicknisi/Developer/case/tasks/active/`:
+   - Derive repo name from the issue content or current working directory
+   - Find the next sequential number: count existing `{repo}-*.md` files + 1
+   - Filename: `{repo}-{n}-{linear-id}.md` (e.g., `cli-2-DX-1234.md`)
+   - Use the appropriate template from `/Users/nicknisi/Developer/case/tasks/templates/`
+   - Fill in: objective from Linear issue, target repo, acceptance criteria, checklist from the routed playbook
+5. Route to the appropriate playbook based on issue content
+6. Create a feature branch: `git checkout -b fix/DX-1234`
+7. **Update the task file** checklist as you work — check items off as they're completed
+8. Execute the work, following all rules below
+9. Open a PR referencing the Linear issue in the body
+10. Update the Linear issue status if MCP tools are available: `mcp__claude_ai_Linear__save_issue`
+11. **Move the task file** to `/Users/nicknisi/Developer/case/tasks/done/` after PR is opened
 
 **How to detect argument type:**
 - Matches `/^\d+$/` → GitHub issue number (e.g., `34`, `142`)
