@@ -15,7 +15,7 @@ All paths below are relative to the skill's cache directory. For scripts, tasks,
 
 ## Agent Architecture
 
-Case uses a **four-agent pipeline** to prevent context pollution. Each agent has a focused context window and a single responsibility:
+Case uses a **five-agent pipeline** to prevent context pollution and enable self-improvement. Each agent has a focused context window and a single responsibility:
 
 | Agent | Responsibility | Tools |
 |---|---|---|
@@ -23,8 +23,9 @@ Case uses a **four-agent pipeline** to prevent context pollution. Each agent has
 | **Implementer** | Write code, run unit tests, commit | Read, Edit, Write, Bash, Glob, Grep |
 | **Verifier** | Manual testing with Playwright, evidence markers, screenshots | Read, Bash, Glob, Grep |
 | **Closer** | Create PR with thorough description, satisfy hook gates | Read, Bash, Glob, Grep |
+| **Retrospective** | Post-run analysis — identify harness improvements from the pipeline run | Read, Glob, Grep |
 
-Agent prompt files: `/Users/nicknisi/Developer/case/agents/{implementer,verifier,closer}.md`
+Agent prompt files: `/Users/nicknisi/Developer/case/agents/{implementer,verifier,closer,retrospective}.md`
 
 The orchestrator spawns each agent sequentially using the `Agent` tool, passing the agent prompt file content as the prompt. Each agent ends its response with a structured `AGENT_RESULT` block (see below).
 
@@ -228,6 +229,31 @@ _(Already done in the Arguments section above)_
 Report to user:
 - PR URL from closer's `AGENT_RESULT`
 - Summary: what was done (from implementer), what was tested (from verifier), PR link (from closer)
+
+### Step 8: Spawn Retrospective
+
+**Always runs** — after both successful and failed pipelines. This is how the harness improves itself.
+
+1. Read `/Users/nicknisi/Developer/case/agents/retrospective.md`
+2. Use the `Agent` tool:
+   - **prompt**: `<retrospective.md content>` + context:
+     - Task file path (with progress log from all agents)
+     - Task JSON path (with agent phases and timing)
+     - Pipeline outcome: "completed" or "failed"
+     - If failed: which agent failed and its AGENT_RESULT error
+   - **subagent_type**: `general-purpose`
+3. Wait for completion
+4. Parse `AGENT_RESULT` from response
+5. If suggestions found, present them to the user via `AskUserQuestion`:
+   ```
+   "Retrospective found <N> harness improvement(s): <summaries>"
+   Options:
+   - "Show details" — Display full improvement suggestions
+   - "Skip" — No harness changes needed right now
+   ```
+6. If "Show details": display each IMPROVEMENT with its LOCATION, PRIORITY, and DETAIL. The user decides whether to apply them (manually or in a follow-up session).
+
+**The retrospective never blocks the pipeline.** If it fails or produces no suggestions, the `/case` run is still complete. It's an optional improvement signal, not a gate.
 
 ## Re-entry Semantics
 
