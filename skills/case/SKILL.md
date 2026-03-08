@@ -30,13 +30,14 @@ Load harness context for the current task. Follow the Task Routing table below.
    - Filename: `{repo}-{n}-issue-{number}.md` (e.g., `authkit-nextjs-1-issue-34.md`)
    - Use the bug-fix template from `/Users/nicknisi/Developer/case/tasks/templates/bug-fix.md`
    - Fill in: objective from issue title/body, target repo, acceptance criteria from issue, checklist from the routed playbook
-5. Route to the appropriate playbook based on issue content (bug → fix-bug, feature → architecture doc + playbook)
-6. Create a feature branch named after the issue: `git checkout -b fix/issue-34`
-7. **Update the task file** checklist as you work — check items off as they're completed
-8. Execute the work
-9. **Run the pre-PR checklist** (see below) — do NOT open a PR until every item passes
-10. Open a PR linking the issue: `gh pr create --body "Closes #34"`
-11. **Move the task file** to `/Users/nicknisi/Developer/case/tasks/done/` after PR is opened
+5. **Activate case enforcement**: `touch .case-active`
+6. Route to the appropriate playbook based on issue content (bug → fix-bug, feature → architecture doc + playbook)
+7. Create a feature branch named after the issue: `git checkout -b fix/issue-34`
+8. **Update the task file** checklist as you work — check items off as they're completed
+9. Execute the work
+10. **Run the pre-PR checklist** (see below) — do NOT open a PR until every item passes
+11. Open a PR linking the issue: `gh pr create --body "Closes #34"`
+12. **Move the task file** to `/Users/nicknisi/Developer/case/tasks/done/` after PR is opened
 
 **Linear issue ID** — `/case DX-1234`
 1. Try the Linear MCP tools first (available via claude.ai integration):
@@ -50,8 +51,9 @@ Load harness context for the current task. Follow the Task Routing table below.
    - Filename: `{repo}-{n}-{linear-id}.md` (e.g., `cli-2-DX-1234.md`)
    - Use the appropriate template from `/Users/nicknisi/Developer/case/tasks/templates/`
    - Fill in: objective from Linear issue, target repo, acceptance criteria, checklist from the routed playbook
-5. Route to the appropriate playbook based on issue content
-6. Create a feature branch: `git checkout -b fix/DX-1234`
+5. **Activate case enforcement**: `touch .case-active`
+6. Route to the appropriate playbook based on issue content
+7. Create a feature branch: `git checkout -b fix/DX-1234`
 7. **Update the task file** checklist as you work — check items off as they're completed
 8. Execute the work
 9. **Run the pre-PR checklist** (see below) — do NOT open a PR until every item passes
@@ -228,14 +230,16 @@ If you are about to open a PR, stop and verify each item:
 - [ ] **Types check** — run typecheck if the repo has one
 - [ ] **Lint passes** — run lint if the repo has one
 - [ ] **Build succeeds** — run build if the repo has one
+- [ ] **Mark tests complete**: `touch .case-tested` (the pre-PR hook checks for this)
 - [ ] **Example app tested — the SPECIFIC fix, not just the happy path.** If the repo has an example app AND the change touches any `src/` file: start the example app, load the `playwright-cli` skill, and reproduce the exact scenario the issue describes. For a bug fix, trigger the bug conditions and confirm the fix works. For a feature, exercise the new feature specifically. Do NOT just sign in and sign out — that's the happy path, not your fix. Ask yourself: "if I reverted my change, would this test fail?" If the answer is no, you're testing the wrong thing. Use credentials from `~/.config/case/credentials`. Skip ONLY for purely docs/config/CI changes.
-- [ ] **Document verification of the SPECIFIC fix.** In the PR description, write what you tested, how you triggered the bug/feature, and what you observed. For a bug fix: describe the behavior BEFORE and AFTER. Be specific — "I triggered a token refresh error by letting the session expire, and confirmed the error no longer throws a 500." Screenshots are ideal but GitHub's API doesn't support image uploads — if you find a way to attach them, do so. Skip ONLY for pure backend/CLI/types-only changes.
+- [ ] **Mark manual testing complete**: `touch .case-manual-tested` (the pre-PR hook checks for this — skip only if no src/ files changed)
+- [ ] **Document verification of the SPECIFIC fix.** In the PR description, write what you tested, how you triggered the bug/feature, and what you observed. For a bug fix: describe the behavior BEFORE and AFTER. Be specific — "I triggered a token refresh error by letting the session expire, and confirmed the error no longer throws a 500."
 - [ ] **Security audit** — if the change touches authentication, session management, token handling, cookie logic, middleware, or any code that enforces access control: load the `security-auditor` skill via the Skill tool and run it against the changed files. Address any critical or high findings before proceeding. Skip for changes that don't touch auth/security boundaries.
 - [ ] **Task file updated** — all checklist items in the task file are checked off
 - [ ] **Conventional commit** — commit messages follow `type(scope): description`
-- [ ] **PR description drafted** — includes: summary, what was tested, screenshots/video (if applicable), issue link, follow-ups
+- [ ] **PR description drafted** — includes: summary, what was tested, verification notes, issue link, follow-ups
 
-**Do not skip this. Do not "come back to it." Complete it now, before `gh pr create`.**
+**The pre-PR hook will BLOCK `gh pr create` if markers are missing. Do the work, create the markers, then open the PR.**
 
 ## Improving the Harness
 

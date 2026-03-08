@@ -1,0 +1,4 @@
+# Case harness marker files (created by /case skill, cleaned up by hooks)
+.case-active
+.case-tested
+.case-manual-tested
