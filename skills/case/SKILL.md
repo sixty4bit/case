@@ -152,33 +152,22 @@ Use these to verify your work beyond unit tests.
 
 ### Playwright (primary for front-end)
 
-```bash
-# Inline script for one-off verification
-node -e "
-const { chromium } = require('playwright');
-(async () => {
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
-  await page.goto('http://localhost:3000');
-  console.log(await page.title());
-  await page.screenshot({ path: '/tmp/screenshot.png' });
-  await browser.close();
-})();
-"
+Use the `playwright-cli` skill for browser automation. Load it via the Skill tool:
+
+```
+Skill: playwright-cli
 ```
 
-**Capture screenshots and video for PRs:**
-```javascript
-// Screenshot
-await page.screenshot({ path: '/tmp/after.png', fullPage: true });
+The skill provides `playwright-cli` commands: `open`, `goto`, `click`, `type`, `screenshot`, `snapshot`, and more. Use `Bash(playwright-cli:*)` for all browser interactions.
 
-// Video — start recording at context creation
-const context = await browser.newContext({
-  recordVideo: { dir: '/tmp/videos/' }
-});
-const page = await context.newPage();
-// ... do the work ...
-await context.close(); // video saved to /tmp/videos/
+Quick reference:
+```bash
+playwright-cli open                          # open browser
+playwright-cli goto https://localhost:3000   # navigate
+playwright-cli snapshot                      # get page snapshot with refs
+playwright-cli click e15                     # click element by ref
+playwright-cli type "user@example.com"       # type text
+playwright-cli screenshot --path /tmp/screenshot.png  # capture
 ```
 
 ### Test credentials
