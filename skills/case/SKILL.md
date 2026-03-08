@@ -63,25 +63,6 @@ Load harness context for the current task. Follow the Task Routing table below.
 - Matches `/^[A-Z]+-\d+$/` → Linear issue ID (e.g., `DX-1234`, `AUTH-42`)
 - Anything else → treat as a free-form task description, use Task Routing
 
-## Pre-PR Checklist (mandatory)
-
-**Do NOT open a PR until every applicable item is done.** This is a gate, not a suggestion.
-
-- [ ] **Unit tests pass** — run the repo's test command from `projects.json`
-- [ ] **Types check** — run typecheck if the repo has one
-- [ ] **Lint passes** — run lint if the repo has one
-- [ ] **Build succeeds** — run build if the repo has one
-- [ ] **Example app tested** — if the repo has an example app (e.g., `examples/` directory) AND the change affects runtime behavior (not just types/docs), start the example app, test the affected flow with Playwright, verify it works end-to-end using credentials from `~/.config/case/credentials`
-- [ ] **Screenshots/video captured** — if the change affects front-end behavior, capture before (on main) and after (on your branch) screenshots or video with Playwright. These go in the PR description.
-- [ ] **Task file updated** — all checklist items in the task file are checked off
-- [ ] **Conventional commit** — commit messages follow `type(scope): description`
-- [ ] **PR description drafted** — includes: summary, what was tested, screenshots/video (if applicable), issue link, follow-ups
-
-**How to determine if example app testing applies:**
-- Change touches `src/` files that affect runtime behavior → YES, test in example app
-- Change is types-only, docs-only, test-only, or config-only → NO, skip example app
-- Unsure → test it. False positives are cheap; missed bugs in production are not.
-
 ## Rules
 
 - **Always use `AskUserQuestion` tool when asking the user questions.** Do not ask questions in plain text. The tool provides structured options and ensures the user can respond clearly.
@@ -235,6 +216,24 @@ Some repos include example apps for end-to-end testing:
 - **Playwright → front-end changes, auth flows, redirects, cookie behavior, visual verification (preferred)**
 - Chrome DevTools MCP → interactive debugging only, when Playwright can't answer the question
 - Example apps → for end-to-end auth flow testing with real credentials
+
+## STOP — Pre-PR Checklist (mandatory)
+
+**You MUST complete every applicable item below BEFORE running `gh pr create`. This is a hard gate.**
+
+If you are about to open a PR, stop and verify each item:
+
+- [ ] **Unit tests pass** — run the repo's test command
+- [ ] **Types check** — run typecheck if the repo has one
+- [ ] **Lint passes** — run lint if the repo has one
+- [ ] **Build succeeds** — run build if the repo has one
+- [ ] **Example app tested** — if the repo has an example app AND the change affects runtime behavior: start the example app, load the `playwright-cli` skill, test the affected flow end-to-end using credentials from `~/.config/case/credentials`. If unsure whether this applies, do it anyway.
+- [ ] **Screenshots/video captured** — if the change affects front-end behavior: capture before (on main) and after (on your branch) with Playwright. Attach to PR description.
+- [ ] **Task file updated** — all checklist items in the task file are checked off
+- [ ] **Conventional commit** — commit messages follow `type(scope): description`
+- [ ] **PR description drafted** — includes: summary, what was tested, screenshots/video (if applicable), issue link, follow-ups
+
+**Do not skip this. Do not "come back to it." Complete it now, before `gh pr create`.**
 
 ## Improving the Harness
 
