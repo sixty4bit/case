@@ -4,67 +4,75 @@
 
 A harness for orchestrating AI agent work across WorkOS open source projects.
 
-Inspired by [harness engineering](https://openai.com/index/harness-engineering/) — the discipline of designing environments that let AI agents operate reliably at scale. Humans steer. Agents execute. When agents struggle, fix the harness.
+Inspired by [harness engineering](https://openai.com/index/harness-engineering/) and [effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) — the discipline of designing environments that let AI agents operate reliably at scale. Humans steer. Agents execute. When agents struggle, fix the harness.
 
 ## How It Works
 
+Case uses a **five-agent pipeline** where each agent has a focused context window and a single responsibility. This prevents context pollution — the root cause of agents forgetting to test, gaming evidence markers, or skipping checklist items.
+
 ```mermaid
 graph TD
-    A["Engineer: /case 34"] --> B["Case skill"]
+    A["Engineer: /case 34"] --> B["Orchestrator"]
     B --> C{Parse argument}
     C -->|GitHub issue| D["Fetch issue via gh CLI"]
     C -->|Linear issue| E["Fetch issue via Linear MCP"]
-    C -->|No args| F["Load harness context"]
+    C -->|No args| F["Resume or load context"]
 
-    D --> G["Create task file"]
+    D --> G["Create task file + .task.json"]
     E --> G
-    G --> H["touch .case-active"]
-    H --> I["Route to playbook + arch docs"]
-    I --> J["Create feature branch"]
-    J --> K["Execute the work"]
+    G --> H["echo task-id > .case-active"]
+    H --> I["Baseline smoke test"]
+    I -->|FAIL| R8a["Retrospective"]
+    I -->|PASS| J["Spawn Implementer"]
 
-    K --> L{"Pre-PR Checklist"}
-    L -->|tests pass| L1["touch .case-tested"]
-    L -->|manual test| L2["touch .case-manual-tested"]
-    L -->|auth change| L3["Run security-auditor"]
+    J --> K{"Implementer result"}
+    K -->|failed| R8b["Retrospective"]
+    K -->|completed| L["Spawn Verifier"]
 
-    L1 --> M["gh pr create"]
-    L2 --> M
-    L3 --> M
+    L --> M{"Verifier result"}
+    M -->|failed| R8c["Retrospective"]
+    M -->|completed| N["Spawn Closer"]
 
-    M -->|PreToolUse hook| N{"Hooks gate"}
-    N -->|markers missing| O["BLOCKED + remediation"]
-    O -->|agent fixes gaps| L
-    N -->|all pass| P["PR opened"]
+    N --> O{"Closer result"}
+    O -->|failed| R8d["Retrospective"]
+    O -->|completed| P["PR opened"]
 
-    P -->|PostToolUse hook| Q["Cleanup markers + move task"]
-    Q --> R["Engineer reviews PR"]
-    R -->|agent struggled?| S["Fix the harness, not the code"]
+    P --> Q["Spawn Retrospective"]
+    Q --> R["Suggest harness improvements"]
 ```
 
-## Feedback Loop
+### The Five Agents
+
+| Agent | Responsibility | Never does |
+|---|---|---|
+| **Orchestrator** | Parse issue, create task, smoke test, dispatch agents | Write code, run Playwright |
+| **Implementer** | Write fix, run unit tests, commit | Start example apps, create PRs |
+| **Verifier** | Test the specific fix with Playwright, create evidence | Edit code, commit |
+| **Closer** | Create PR with thorough description, satisfy hooks | Edit code, run tests |
+| **Retrospective** | Analyze the run, suggest harness improvements | Edit any files |
+
+## Self-Improvement
+
+After every pipeline run — success or failure — the retrospective agent analyzes what happened and suggests improvements to the harness itself:
 
 ```mermaid
 graph LR
-    A["Agent produces bad output"] --> B["Fix the harness"]
-    B --> C{"What's missing?"}
-    C -->|pattern| D["docs/architecture/"]
-    C -->|convention| E["docs/conventions/"]
-    C -->|recurring task| F["Add playbook + template"]
-    C -->|skips steps| G["Add a hook"]
-    C -->|wrong approach| H["Update repo CLAUDE.md"]
-    D --> I["Next agent succeeds"]
+    A["Pipeline completes"] --> B["Retrospective reads progress log"]
+    B --> C{"What went wrong?"}
+    C -->|missing pattern| D["Suggest: docs/architecture/"]
+    C -->|unclear convention| E["Suggest: docs/conventions/"]
+    C -->|agent skipped steps| F["Suggest: update agent prompt"]
+    C -->|hook too lenient| G["Suggest: update hook"]
+    C -->|nothing| H["No improvements needed"]
+    D --> I["Engineer reviews + applies"]
     E --> I
     F --> I
     G --> I
-    H --> I
 ```
 
 ## Quick Start
 
 ### Install the plugin
-
-Register case as a Claude Code plugin marketplace and install:
 
 ```bash
 claude plugin marketplace add /path/to/case
@@ -73,15 +81,14 @@ claude plugin install case
 
 Restart Claude Code after installing. The `/case` skill will be available in all sessions.
 
-To update after changes to the harness:
+To update after changes:
 ```bash
-claude plugin marketplace update case
-claude plugin uninstall case && claude plugin install case
+claude plugin uninstall case && claude plugin marketplace update && claude plugin install case
 ```
 
 ### Use with an issue
 
-From any target repo, hand an issue to case:
+From any target repo:
 
 ```bash
 # GitHub issue
@@ -91,7 +98,16 @@ From any target repo, hand an issue to case:
 /case DX-1234
 ```
 
-The agent fetches the issue, creates a task file, routes to the right playbook, does the work, and opens a PR. Hooks enforce the pre-PR checklist mechanically.
+The orchestrator fetches the issue, creates a task file (`.md` + `.task.json`), runs a baseline smoke test, then spawns implementer → verifier → closer → retrospective. Hooks enforce evidence mechanically.
+
+### Resume an interrupted run
+
+If a `/case` run is interrupted, re-run the same command. The orchestrator detects the existing `.task.json` and resumes from the last completed agent phase.
+
+```bash
+# Resumes where it left off — doesn't recreate the task
+/case 34
+```
 
 ### Use interactively
 
@@ -99,55 +115,38 @@ The agent fetches the issue, creates a task file, routes to the right playbook, 
 /case fix a bug where session cookies aren't being set correctly
 ```
 
-Loads harness context (landscape, conventions, playbooks) for the current task without the full issue workflow.
+Loads harness context (landscape, conventions, playbooks) for the current task without the full pipeline.
 
-## Dispatching Tasks
+## Task Tracking
 
-Tasks are markdown files that agents execute. This is how you do fire-and-forget parallel work.
+Tasks use a **hybrid format**: human-readable Markdown + a JSON companion for machine-touched fields.
 
-### 1. Pick a template
-
-```bash
-ls tasks/templates/
-# cli-command.md          — add a CLI command
-# authkit-framework.md    — new AuthKit framework integration
-# bug-fix.md              — fix a bug in any repo
-# cross-repo-update.md    — coordinated cross-repo change
+```
+tasks/active/authkit-nextjs-1-issue-53.md         # human-readable
+tasks/active/authkit-nextjs-1-issue-53.task.json   # machine-touched
 ```
 
-### 2. Fill it in
+The JSON companion tracks status, agent phases, evidence flags, and PR metadata. Status transitions are enforced by `scripts/task-status.sh`:
+
+```
+active → implementing → verifying → closing → pr-opened → merged
+```
+
+Each agent appends to the task file's `## Progress Log` — creating a running record of what was done, by whom, and when.
+
+### Dispatching tasks manually
 
 ```bash
+# Pick a template
+ls tasks/templates/
+
+# Fill it in
 cp tasks/templates/bug-fix.md tasks/active/authkit-nextjs-1-fix-cookie-bug.md
 # Edit the file — fill in {placeholders}
-```
 
-### 3. Hand it to an agent
-
-Use `--worktree` so the agent works in an isolated branch:
-
-```bash
+# Hand it to an agent (use --worktree for isolation)
 claude --worktree -p "Execute the task in tasks/active/authkit-nextjs-1-fix-cookie-bug.md"
 ```
-
-### 4. Run multiple in parallel
-
-Each agent gets its own worktree — no conflicts:
-
-```bash
-# Terminal 1
-claude --worktree -p "Execute tasks/active/cli-1-add-widgets.md"
-
-# Terminal 2
-claude --worktree -p "Execute tasks/active/authkit-nextjs-1-fix-cookie-bug.md"
-
-# Terminal 3
-claude --worktree -p "Execute tasks/active/x-1-update-readme-badges.md"
-```
-
-### 5. Review PRs
-
-Each agent opens a PR in the target repo. Review and merge as usual. Task files are automatically moved to `tasks/done/` by the post-PR hook.
 
 ## Enforcement
 
@@ -155,22 +154,16 @@ Case uses Claude Code hooks to mechanically enforce the pre-PR checklist. Hooks 
 
 | Hook | Trigger | What it enforces |
 | --- | --- | --- |
-| `pre-pr-check.sh` | `gh pr create` | Tests ran, manual testing done, verification notes in PR body, on feature branch |
+| `pre-pr-check.sh` | `gh pr create` | Evidence-based test markers (not bare `touch`), manual testing evidence if src/ changed, verification notes in PR body, feature branch |
 | `pre-push-check.sh` | `git push` | Not pushing to main/master |
 | `pre-commit-check.sh` | `git commit` | Conventional commit format |
-| `post-pr-cleanup.sh` | `gh pr create` (after) | Moves task file to `done/`, cleans up markers |
+| `post-pr-cleanup.sh` | `gh pr create` (after) | Updates task JSON status to `pr-opened`, cleans up markers |
 
-When a hook blocks, it tells the agent exactly what's wrong and how to fix it:
+Evidence markers are created by scripts that verify work was actually done:
+- `mark-tested.sh` — requires piped test output, records SHA-256 hash. Rejects bare `touch`.
+- `mark-manual-tested.sh` — requires recent Playwright screenshots. Rejects without evidence.
 
-```
-CASE PRE-PR CHECK FAILED
-
-[FAIL] Tests not verified — .case-tested marker missing
-  FIX: Run tests (pnpm test, pnpm typecheck, pnpm build), then: touch .case-tested
-
-[FAIL] Manual testing not done — .case-manual-tested marker missing
-  FIX: Test the specific fix in the example app with playwright-cli, then: touch .case-manual-tested
-```
+Both scripts also update the task JSON as a side effect.
 
 ## Verification Tools
 
@@ -193,9 +186,6 @@ bash scripts/check.sh --repo cli
 
 # Bootstrap a repo for agent work (install deps, run tests, build)
 bash scripts/bootstrap.sh cli
-
-# Run checks including test execution
-bash scripts/check.sh --run-tests
 ```
 
 ## What's in the Harness
@@ -203,14 +193,19 @@ bash scripts/check.sh --run-tests
 ```
 .claude-plugin/                     Plugin + marketplace manifests
 skills/
-  case/SKILL.md                     /case skill (router + workflow + checklist)
+  case/SKILL.md                     /case skill (orchestrator + pipeline)
   security-auditor/SKILL.md         Security audit (auto-invoked, not user-facing)
+agents/
+  implementer.md                    Subagent: code + unit tests
+  verifier.md                       Subagent: Playwright testing + evidence
+  closer.md                         Subagent: PR creation + hook satisfaction
+  retrospective.md                  Subagent: post-run harness improvement
 hooks/
   hooks.json                        Hook configuration
-  pre-pr-check.sh                   Block PR without test/verification markers
+  pre-pr-check.sh                   Block PR without evidence markers
   pre-push-check.sh                 Block push to main/master
   pre-commit-check.sh               Enforce conventional commits
-  post-pr-cleanup.sh                Move task files, clean markers
+  post-pr-cleanup.sh                Update task JSON status, clean markers
 
 AGENTS.md                           Entry point for agents (project landscape)
 CLAUDE.md                           How to improve case itself
@@ -222,15 +217,20 @@ docs/
   playbooks/                        Step-by-step guides for recurring operations
   golden-principles.md              Enforced invariants across all repos
   philosophy.md                     Design principles guiding case
+  ideation/                         Ideation artifacts (contracts, specs)
 
 tasks/
-  active/                           Current tasks for agent execution
+  active/                           Current tasks (.md + .task.json pairs)
   done/                             Completed tasks
   templates/                        Fill-in-the-blank task templates
+  task.schema.json                  JSON Schema for .task.json companion files
 
 scripts/
   check.sh                          Convention enforcement across repos
   bootstrap.sh                      Per-repo readiness verification
+  task-status.sh                    Read/update task JSON with transition validation
+  mark-tested.sh                    Evidence-based test marker (rejects bare touch)
+  mark-manual-tested.sh             Evidence-based manual test marker
   upload-screenshot.sh              Upload images to GitHub for PR descriptions
 ```
 
@@ -254,6 +254,7 @@ See [docs/philosophy.md](docs/philosophy.md) for the full set of principles. The
 - **Never write code directly.** Only improve the harness. All code flows through agents.
 - **When agents struggle, fix the harness.** The fix is never "try harder."
 - **Enforce mechanically, not rhetorically.** Instructions decay over long sessions. Hooks don't.
+- **Every run improves the harness.** The retrospective agent surfaces what to fix after every pipeline run.
 - **The harness is the product. The code is the output.**
 
 ## Relationship to Skills Plugin
