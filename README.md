@@ -1,7 +1,6 @@
 # Case
 
-![Uploading Untitled design.png…]()
-
+<img width="600" height="600" alt="Untitled design" src="https://github.com/user-attachments/assets/e98728ea-c2fc-4c13-97d8-fd0a7e825b89" />
 
 A harness for orchestrating AI agent work across WorkOS open source projects.
 
