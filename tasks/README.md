@@ -17,6 +17,7 @@ Numbers are sequential per prefix: `cli-1`, `cli-2`, `authkit-nextjs-1`, `x-1`, 
 
 | Section | Purpose |
 | --- | --- |
+| Mission Summary | Blockquote at the very top (before `# Title`) with Mission, Repo, and Done-when — survives context compaction |
 | `# Title` | Brief description (becomes the task file name slug) |
 | `## Objective` | What needs to happen and why |
 | `## Target Repos` | Which repos this task touches (paths from projects.json) |
@@ -119,6 +120,10 @@ Every task file has a `## Progress Log` section at the end. Agents append entrie
 ## Example
 
 ```markdown
+> **Mission**: Add `orgs list` CLI command so users can list organizations from the terminal
+> **Repo**: ../cli/main
+> **Done when**: `workos orgs list` outputs organizations in human-readable and JSON formats
+
 # Add `workos orgs list` command
 
 ## Objective

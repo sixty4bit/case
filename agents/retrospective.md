@@ -100,11 +100,47 @@ For each finding, apply the fix directly:
 - `scripts/` — harness scripts
 - `hooks/` — hook scripts
 - `skills/` — skill files
+- `docs/learnings/` — per-repo tactical knowledge
 
 **What you must NEVER edit:**
 - Target repo source code (anything outside `case/`)
 - Task files in `tasks/active/` (those are the record of what happened)
 - `projects.json` schema or structure
+
+### 4b. Update Repo Learnings
+
+After applying harness improvements, check if the run produced tactical knowledge specific to the target repo.
+
+**What qualifies as a learning:**
+- A gotcha the implementer hit that isn't in any existing doc (e.g., "mock X as module, not individual exports")
+- A file path or pattern that was hard to find (e.g., "cookie config lives in `src/config/auth.ts`, not `src/middleware.ts`")
+- An environment or setup quirk (e.g., "tests require `NODE_OPTIONS=--experimental-vm-modules`")
+- A dependency behavior that surprised the agent (e.g., "`iron-webcrypto` seals differ from `iron-session` — can't decrypt across libraries")
+
+**What does NOT qualify:**
+- General programming knowledge
+- Information already in the repo's CLAUDE.md or architecture docs
+- One-time issues that won't recur
+
+**How to append:**
+1. Identify the target repo from the task file's `## Target Repos` section
+2. Read `docs/learnings/{repo}.md`
+3. Check if a similar learning already exists (don't duplicate)
+4. Append a new entry:
+   ```
+   - **{YYYY-MM-DD}** — `{file or area}`: {1-2 line tactical note}. (from task {task-filename})
+   ```
+
+### 4c. Escalate Repeated Violations
+
+After updating learnings, scan the learnings file for patterns:
+
+1. Read `docs/learnings/{repo}.md`
+2. Look for 3+ entries describing the same class of issue (e.g., multiple entries about mocking, multiple about import paths)
+3. If found, escalate:
+   - If it's a repo-specific pattern -> note it for the repo's CLAUDE.md (add a comment to the learnings file: "ESCALATION CANDIDATE: consider adding to {repo} CLAUDE.md")
+   - If it's a cross-repo pattern -> add to `docs/golden-principles.md` or the relevant convention doc
+4. Log the escalation in your output summary
 
 ### 5. Output
 

@@ -33,6 +33,7 @@ Full metadata (commands, remotes, language): `projects.json`
 | Playbooks | `docs/playbooks/` |
 | Agent roles | `agents/` |
 | Entropy management | `docs/conventions/entropy-management.md` |
+| Repo learnings | `docs/learnings/` |
 
 ## Task Dispatch
 

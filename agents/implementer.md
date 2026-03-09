@@ -42,6 +42,7 @@ Read the output to understand: current branch, last commits, task status, which 
 3. Read the target repo's `CLAUDE.md` for project-specific instructions
 4. Read the playbook referenced in the task file
 5. Read `/Users/nicknisi/Developer/case/projects.json` to find the repo's available commands (test, typecheck, lint, build, format)
+6. Read `/Users/nicknisi/Developer/case/docs/learnings/{repo}.md` for tactical knowledge from previous tasks in this repo
 
 ### 2. Implement
 
@@ -67,6 +68,22 @@ pnpm build         # if available
 ```
 
 All checks must pass before proceeding. If any fail, fix the issue and re-run.
+
+### 3b. Checkpoint (after each logical step)
+
+After each meaningful implementation step (e.g., test written, root cause fixed, validation passing), create a WIP commit:
+
+```bash
+git add -A && git commit -m "wip: {what this step accomplished}"
+```
+
+WIP commits provide rollback points if a later step goes wrong. Before your final commit (step 4), squash all WIP commits into one clean conventional commit:
+
+```bash
+git reset --soft $(git merge-base HEAD main) && git add -A
+```
+
+Then create the final commit as usual.
 
 ### 4. Record
 

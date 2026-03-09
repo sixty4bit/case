@@ -1,3 +1,7 @@
+> **Mission**: {one-line what + why}
+> **Repo**: {target repo path}
+> **Done when**: {single most important acceptance criterion}
+
 # Fix: {brief description}
 
 ## Objective

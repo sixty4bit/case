@@ -1,3 +1,7 @@
+> **Mission**: {one-line what + why}
+> **Repo**: {../authkit-{framework-name}}
+> **Done when**: {single most important acceptance criterion}
+
 # Add AuthKit Framework: {framework-name}
 
 ## Objective

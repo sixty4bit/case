@@ -43,3 +43,12 @@ Principles that guide how case is built and used. These come from experience, fr
 - **Don't build tooling for pain you haven't felt yet.** Use the primitives, note what hurts, build for that.
 - **The harness improves through feedback.** Agent fails → you update case → next agent succeeds. The loop compounds.
 - **Lightweight beats elaborate.** Markdown files and habits beat complex tooling when the landscape is changing quickly.
+
+## Context Engineering
+
+Principles derived from the OpenDev paper on engineering context for LLM agents.
+
+- **Context survives compaction when structured for it.** Put the most critical information at the top of any document an agent will read during a long session. Summaries first, details second.
+- **Doom loops are a system failure, not an agent failure.** When an agent retries the same failing approach, the harness should break the cycle mechanically — not rely on the agent to self-correct.
+- **Knowledge compounds across runs.** Each pipeline run should leave the harness smarter. Tactical learnings from completed tasks feed into future tasks targeting the same repo.
+- **Stable instructions first, volatile details last.** LLM providers cache prompt prefixes. Structuring CLAUDE.md with stable rules at the top and temporary notes at the bottom maximizes cache hits.

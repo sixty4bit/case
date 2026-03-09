@@ -41,7 +41,7 @@ if [[ -f ".case-active" ]]; then
         bash "${CASE_REPO}/scripts/task-status.sh" "$TASK_JSON" prUrl "$PR_URL" 2>/dev/null || true
       fi
       # JSON path was attempted — do NOT fall through to file-move
-      rm -f .case-active .case-tested .case-manual-tested
+      rm -f .case-active .case-tested .case-manual-tested .case-doom-loop-state .case-reviewed
       exit 0
     else
       echo "WARNING: .case-active contains '${TASK_ID}' but task JSON not found at ${TASK_JSON}. Status will NOT transition to pr-opened." >&2
@@ -64,6 +64,6 @@ if [[ -z "$HAS_TASK_JSON" ]]; then
 fi
 
 # Clean up all marker files
-rm -f .case-active .case-tested .case-manual-tested
+rm -f .case-active .case-tested .case-manual-tested .case-doom-loop-state .case-reviewed
 
 exit 0

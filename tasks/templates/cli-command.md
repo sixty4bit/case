@@ -1,3 +1,7 @@
+> **Mission**: {one-line what + why}
+> **Repo**: ../cli/main
+> **Done when**: {single most important acceptance criterion}
+
 # Add CLI Command: {command-name}
 
 ## Objective

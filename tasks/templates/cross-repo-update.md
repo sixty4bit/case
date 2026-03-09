@@ -1,3 +1,7 @@
+> **Mission**: {one-line what + why}
+> **Repo**: {list primary target repos}
+> **Done when**: {single most important acceptance criterion}
+
 # Cross-Repo: {brief description}
 
 ## Objective
