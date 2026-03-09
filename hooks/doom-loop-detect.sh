@@ -25,29 +25,21 @@ result = str(d.get('tool_result', '') or '')
 output = str(d.get('tool_output', '') or '')
 combined = result + output
 
-# Multiple patterns for non-zero exit codes
-patterns = [
+# Only trust explicit non-zero exit code patterns.
+# Do NOT match bare keywords like 'Error:' or 'Command failed' —
+# those can appear in successful output (e.g. grep results, log lines).
+exit_patterns = [
     r'exit code (\d+)',
     r'exited with code (\d+)',
     r'non-zero code[:\s]+(\d+)',
     r'exit status (\d+)',
-    r'returned (\d+)',
-    r'Command failed',
-    r'Error:',
 ]
 
-for p in patterns:
+for p in exit_patterns:
     m = re.search(p, combined, re.IGNORECASE)
-    if m:
-        # If pattern has a capture group, check it's non-zero
-        if m.lastindex and m.lastindex >= 1:
-            if m.group(1) != '0':
-                print('1')
-                sys.exit(0)
-        else:
-            # Pattern without capture group (e.g. 'Command failed') = failure
-            print('1')
-            sys.exit(0)
+    if m and m.group(1) != '0':
+        print('1')
+        sys.exit(0)
 
 print('0')
 " 2>/dev/null || echo "0")
