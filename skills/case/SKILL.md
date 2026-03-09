@@ -15,17 +15,18 @@ All paths below are relative to the skill's cache directory. For scripts, tasks,
 
 ## Agent Architecture
 
-Case uses a **five-agent pipeline** to prevent context pollution and enable self-improvement. Each agent has a focused context window and a single responsibility:
+Case uses a **six-agent pipeline** to prevent context pollution and enable self-improvement. Each agent has a focused context window and a single responsibility:
 
 | Agent | Responsibility | Tools |
 |---|---|---|
 | **Orchestrator** (you) | Parse issue, create task, baseline smoke test, spawn subagents | AskUserQuestion, Agent, Read, Bash |
-| **Implementer** | Write code, run unit tests, commit | Read, Edit, Write, Bash, Glob, Grep |
+| **Implementer** | Write code, run unit tests, commit (with WIP checkpoints), read repo learnings | Read, Edit, Write, Bash, Glob, Grep |
 | **Verifier** | Manual testing with Playwright, evidence markers, screenshots | Read, Bash, Glob, Grep |
-| **Closer** | Create PR with thorough description, satisfy hook gates | Read, Bash, Glob, Grep |
-| **Retrospective** | Post-run analysis — identify harness improvements from the pipeline run | Read, Glob, Grep |
+| **Reviewer** | Review diff against golden principles, classify findings, gate PR creation | Read, Bash, Glob, Grep |
+| **Closer** | Create PR with thorough description, satisfy hook gates, post review comments | Read, Bash, Glob, Grep |
+| **Retrospective** | Apply harness improvements directly, maintain per-repo learnings | Read, Edit, Write, Bash, Glob, Grep |
 
-Agent prompt files: `/Users/nicknisi/Developer/case/agents/{implementer,verifier,closer,retrospective}.md`
+Agent prompt files: `/Users/nicknisi/Developer/case/agents/{implementer,verifier,reviewer,closer,retrospective}.md`
 
 The orchestrator spawns each agent sequentially using the `Agent` tool, passing the agent prompt file content as the prompt. Each agent ends its response with a structured `AGENT_RESULT` block (see below).
 
@@ -107,8 +108,9 @@ After parsing and fetching the issue, execute this pipeline:
 **Resume status table** (when an existing task is found):
    - `active` → go to step 3 (Branch & Baseline)
    - `implementing` → step 4 (Implementer) if implementer failed, step 5 (Verifier) if implementer completed
-   - `verifying` → step 5 (Verifier) if verifier failed, step 6 (Closer) if verifier completed
-   - `closing` → step 6 (Closer)
+   - `verifying` → step 5 (Verifier) if verifier failed, step 6 (Reviewer) if verifier completed
+   - `reviewing` → step 6 (Reviewer) if reviewer failed/blocked, step 7 (Closer) if reviewer completed
+   - `closing` → step 7 (Closer)
    - `pr-opened` → report "PR already exists" and done
 
 If not found → proceed to step 1
@@ -136,6 +138,7 @@ _(Already done in the Arguments section above)_
        "orchestrator": { "status": "running", "started": "<ISO>" },
        "implementer": { "status": "pending" },
        "verifier": { "status": "pending" },
+       "reviewer": { "status": "pending" },
        "closer": { "status": "pending" }
      },
      "tested": false,
@@ -162,7 +165,7 @@ _(Already done in the Arguments section above)_
    ```bash
    bash /Users/nicknisi/Developer/case/scripts/bootstrap.sh <repo-name>
    ```
-   - If FAIL: Report broken baseline to user via `AskUserQuestion`. Do not spawn implementer. **Go to step 8 (Retrospective)** with outcome "failed" and failed agent "orchestrator/baseline".
+   - If FAIL: Report broken baseline to user via `AskUserQuestion`. Do not spawn implementer. **Go to step 9 (Retrospective)** with outcome "failed" and failed agent "orchestrator/baseline".
    - If PASS: continue
 4. Append to task file progress log:
    ```markdown
@@ -189,7 +192,7 @@ _(Already done in the Arguments section above)_
    - **subagent_type**: `general-purpose`
 3. Wait for completion
 4. Parse `AGENT_RESULT` from response
-5. If `status == "failed"`: report error to user via `AskUserQuestion`. **Go to step 8 (Retrospective)** with outcome "failed" and failed agent "implementer".
+5. If `status == "failed"`: report error to user via `AskUserQuestion`. **Go to step 9 (Retrospective)** with outcome "failed" and failed agent "implementer".
 6. If `status == "completed"`: continue to step 5
 
 ### Step 5: Spawn Verifier
@@ -205,14 +208,37 @@ _(Already done in the Arguments section above)_
    - **If src/ changed** (verification mandatory — hook will block):
      Use `AskUserQuestion`: "Verification failed: `<summary>`"
      Options: "Fix and re-verify" | "Abort"
-     If "Abort": **go to step 8 (Retrospective)** with outcome "failed" and failed agent "verifier".
+     If "Abort": **go to step 9 (Retrospective)** with outcome "failed" and failed agent "verifier".
    - **If NO src/ changed** (verification optional):
      Use `AskUserQuestion`: "Verification failed: `<summary>`"
      Options: "Fix and re-verify" | "Skip verification" | "Abort"
-     If "Abort": **go to step 8 (Retrospective)** with outcome "failed" and failed agent "verifier".
+     If "Abort": **go to step 9 (Retrospective)** with outcome "failed" and failed agent "verifier".
 6. If `status == "completed"`: continue to step 6
 
-### Step 6: Spawn Closer
+### Step 6: Spawn Reviewer
+
+1. Update task JSON status to `reviewing`:
+   ```bash
+   bash /Users/nicknisi/Developer/case/scripts/task-status.sh <task.json> status reviewing
+   ```
+2. Read `/Users/nicknisi/Developer/case/agents/reviewer.md`
+3. Use the `Agent` tool:
+   - **prompt**: `<reviewer.md content>` + task context:
+     - Task file path (`.md` and `.task.json`)
+     - Target repo path
+   - **subagent_type**: `general-purpose`
+4. Wait for completion
+5. Parse `AGENT_RESULT` from response
+6. If `status == "blocked"` (critical findings):
+   - Report critical findings to user via `AskUserQuestion`:
+     "Reviewer found `<N>` critical finding(s): `<details>`"
+     Options: "Re-implement and re-review" | "Override and continue" | "Abort"
+     If "Re-implement and re-review": **go to step 4 (Implementer)** to address the findings, then re-run verifier and reviewer.
+     If "Override and continue": continue to step 7 (Closer). Note: the pre-PR hook will still require `.case-reviewed` — the user must manually create the marker or address the findings.
+     If "Abort": **go to step 9 (Retrospective)** with outcome "failed" and failed agent "reviewer".
+7. If `status == "completed"` (no critical findings): continue to step 7
+
+### Step 7: Spawn Closer
 
 1. Update task JSON status to `closing`:
    ```bash
@@ -220,22 +246,22 @@ _(Already done in the Arguments section above)_
    ```
 2. Read `/Users/nicknisi/Developer/case/agents/closer.md`
 3. Use the `Agent` tool:
-   - **prompt**: `<closer.md content>` + task context (file path, repo path, verifier `AGENT_RESULT`)
+   - **prompt**: `<closer.md content>` + task context (file path, repo path, verifier `AGENT_RESULT`, reviewer `AGENT_RESULT`)
    - **subagent_type**: `general-purpose`
 4. Wait for completion
 5. Parse `AGENT_RESULT` from response
-6. If `status == "failed"`: report to user, suggest which steps to re-run. **Go to step 8 (Retrospective)** with outcome "failed" and failed agent "closer".
-7. If `status == "completed"`: continue to step 7
+6. If `status == "failed"`: report to user, suggest which steps to re-run. **Go to step 9 (Retrospective)** with outcome "failed" and failed agent "closer".
+7. If `status == "completed"`: continue to step 8
 
-### Step 7: Complete
+### Step 8: Complete
 
 Report to user:
 - PR URL from closer's `AGENT_RESULT`
-- Summary: what was done (from implementer), what was tested (from verifier), PR link (from closer)
+- Summary: what was done (from implementer), what was tested (from verifier), what was reviewed (from reviewer), PR link (from closer)
 
-### Step 8: Spawn Retrospective
+### Step 9: Spawn Retrospective
 
-**Always runs** — after both successful and failed pipelines, at every failure class (baseline, implementer, verifier, closer). Every failure branch in steps 3-7 routes here explicitly. This is how the harness improves itself.
+**Always runs** — after both successful and failed pipelines, at every failure class (baseline, implementer, verifier, reviewer, closer). Every failure branch in steps 3-8 routes here explicitly. This is how the harness improves itself.
 
 1. Read `/Users/nicknisi/Developer/case/agents/retrospective.md`
 2. Use the `Agent` tool:
@@ -463,6 +489,7 @@ The orchestrator spawns the closer, which handles this checklist. If you're the 
 - [ ] **Test evidence exists**: `.case-tested` with `output_hash` (created by implementer via `mark-tested.sh`)
 - [ ] **Manual testing done** (if src/ files changed): `.case-manual-tested` with `evidence` (created by verifier via `mark-manual-tested.sh`)
 - [ ] **Screenshots captured and uploaded** (if front-end changes): verifier captured via Playwright and uploaded via `upload-screenshot.sh`
+- [ ] **Code review passed**: `.case-reviewed` with `critical: 0` (created by reviewer via `mark-reviewed.sh`)
 - [ ] **Security audit** — if the change touches authentication, session management, token handling, cookie logic, middleware, or any code that enforces access control: load the `security-auditor` skill via the Skill tool and run it against the changed files. Address any critical or high findings before proceeding. Skip for changes that don't touch auth/security boundaries.
 - [ ] **Task file progress log updated** — all agents appended their entries
 - [ ] **Conventional commit** — implementer used `type(scope): description`
