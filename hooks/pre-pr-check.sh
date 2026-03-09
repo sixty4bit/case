@@ -25,7 +25,7 @@ fi
 if [[ -f ".case-active" ]]; then
   MARKER_AGE=$(( $(date +%s) - $(stat -f %m .case-active 2>/dev/null || stat -c %Y .case-active 2>/dev/null || echo "0") ))
   if [[ $MARKER_AGE -gt 86400 ]]; then
-    rm -f .case-active .case-tested .case-manual-tested
+    rm -f .case-active .case-tested .case-manual-tested .case-reviewed .case-doom-loop-state
     echo "Warning: stale .case-active marker (>24h) auto-cleaned." >&2
     exit 0
   fi

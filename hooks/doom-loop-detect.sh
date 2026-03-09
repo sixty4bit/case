@@ -12,32 +12,65 @@ if [[ ! -f ".case-active" ]]; then
   exit 0
 fi
 
-# Parse tool result from PostToolUse JSON
-# PostToolUse provides: tool_name, tool_input, tool_result
-EXIT_CODE=$(echo "$INPUT" | python3 -c "
+# Detect failure from PostToolUse JSON.
+# Claude Code PostToolUse payloads vary — tool_result or tool_output,
+# and exit codes appear in multiple formats. Check all known patterns.
+IS_FAILURE=$(echo "$INPUT" | python3 -c "
 import sys, json, re
+
 d = json.load(sys.stdin)
-result = d.get('tool_result', '')
-# Look for exit code pattern in bash output
-m = re.search(r'exit code (\d+)', str(result))
-print(m.group(1) if m else '0')
+
+# Check both possible field names for the tool output
+result = str(d.get('tool_result', '') or '')
+output = str(d.get('tool_output', '') or '')
+combined = result + output
+
+# Multiple patterns for non-zero exit codes
+patterns = [
+    r'exit code (\d+)',
+    r'exited with code (\d+)',
+    r'non-zero code[:\s]+(\d+)',
+    r'exit status (\d+)',
+    r'returned (\d+)',
+    r'Command failed',
+    r'Error:',
+]
+
+for p in patterns:
+    m = re.search(p, combined, re.IGNORECASE)
+    if m:
+        # If pattern has a capture group, check it's non-zero
+        if m.lastindex and m.lastindex >= 1:
+            if m.group(1) != '0':
+                print('1')
+                sys.exit(0)
+        else:
+            # Pattern without capture group (e.g. 'Command failed') = failure
+            print('1')
+            sys.exit(0)
+
+print('0')
 " 2>/dev/null || echo "0")
 
 # If command succeeded, reset state and allow
-if [[ "$EXIT_CODE" == "0" ]]; then
+if [[ "$IS_FAILURE" == "0" ]]; then
   rm -f .case-doom-loop-state
   exit 0
 fi
 
-# Extract fingerprint: command + exit code + first stderr line
+# Extract fingerprint: command + first line of output (truncated)
 FINGERPRINT=$(echo "$INPUT" | python3 -c "
 import sys, json, hashlib
+
 d = json.load(sys.stdin)
 cmd = d.get('tool_input', {}).get('command', '')
-result = str(d.get('tool_result', ''))
+
+# Use whichever field has content
+result = str(d.get('tool_result', '') or d.get('tool_output', '') or '')
 lines = result.strip().split('\n')
-first_err = lines[0][:200] if lines else ''
-fp = f'{cmd}|{first_err}'
+first_line = lines[0][:200] if lines else ''
+
+fp = f'{cmd}|{first_line}'
 print(hashlib.sha256(fp.encode()).hexdigest()[:16])
 " 2>/dev/null || echo "unknown")
 

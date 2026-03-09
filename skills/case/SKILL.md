@@ -217,26 +217,22 @@ _(Already done in the Arguments section above)_
 
 ### Step 6: Spawn Reviewer
 
-1. Update task JSON status to `reviewing`:
-   ```bash
-   bash /Users/nicknisi/Developer/case/scripts/task-status.sh <task.json> status reviewing
-   ```
-2. Read `/Users/nicknisi/Developer/case/agents/reviewer.md`
-3. Use the `Agent` tool:
+1. Read `/Users/nicknisi/Developer/case/agents/reviewer.md`
+2. Use the `Agent` tool:
    - **prompt**: `<reviewer.md content>` + task context:
      - Task file path (`.md` and `.task.json`)
      - Target repo path
    - **subagent_type**: `general-purpose`
-4. Wait for completion
-5. Parse `AGENT_RESULT` from response
-6. If `status == "blocked"` (critical findings):
+3. Wait for completion
+4. Parse `AGENT_RESULT` from response
+5. If `status == "blocked"` (critical findings):
    - Report critical findings to user via `AskUserQuestion`:
      "Reviewer found `<N>` critical finding(s): `<details>`"
      Options: "Re-implement and re-review" | "Override and continue" | "Abort"
      If "Re-implement and re-review": **go to step 4 (Implementer)** to address the findings, then re-run verifier and reviewer.
      If "Override and continue": continue to step 7 (Closer). Note: the pre-PR hook will still require `.case-reviewed` — the user must manually create the marker or address the findings.
      If "Abort": **go to step 9 (Retrospective)** with outcome "failed" and failed agent "reviewer".
-7. If `status == "completed"` (no critical findings): continue to step 7
+6. If `status == "completed"` (no critical findings): continue to step 7
 
 ### Step 7: Spawn Closer
 
