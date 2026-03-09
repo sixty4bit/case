@@ -68,10 +68,10 @@ Trace from the failing test (or reproduction) back to the source:
 
 ```bash
 pnpm test                # all tests pass, including your new one
-pnpm typecheck           # no type errors (strict mode)
+pnpm build               # build succeeds (includes type checking via tsc)
+pnpm typecheck           # if available as a separate command (check projects.json)
 pnpm lint                # where applicable (cli, authkit-nextjs, skills)
 pnpm format              # formatter passes
-pnpm build               # where applicable
 ```
 
 Confirm no regressions by running the full test suite, not just your new test.

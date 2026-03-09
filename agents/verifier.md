@@ -52,23 +52,46 @@ git diff --name-only HEAD~1 | grep "^src/" || git diff --name-only main | grep "
 1. Read the issue description from the task file's `## Issue Reference` or `## Objective` section
 2. Identify the specific bug/feature scenario to reproduce
 3. Read `/Users/nicknisi/Developer/case/projects.json` to find if the target repo has an example app
+
+**3a. Port hygiene — MANDATORY before starting any app:**
+```bash
+# Check if the port is already in use
+lsof -i :3000 -t 2>/dev/null
+```
+If any process is already on the port, **kill it first** or use a different port. Never assume a running server on the expected port is *your* app. After starting, verify the page title or content matches expectations.
+
 4. Start the example app if one exists:
    ```bash
    cd <example-app-path> && pnpm dev &
+   sleep 5  # wait for startup
    ```
-5. Read test credentials from `~/.config/case/credentials` (use for .env files only — **never log credentials**)
-6. Load the `playwright-cli` skill for browser testing
-7. Navigate to the relevant page/flow:
+5. **Verify it's your app** — check the page title or body content:
+   ```bash
+   curl -s http://localhost:3000 | head -20
+   ```
+   If the content doesn't match the expected app (wrong framework, wrong title), stop and investigate.
+
+**3b. Exercise the new code path — MANDATORY for features:**
+If the implementer added a new export, alias, or API:
+- The example app (or a test script) MUST actually **use the new code**. Loading an app that still uses the old import proves nothing.
+- If the example app doesn't use the new export yet, **temporarily modify it** to import/use the new export, then verify it works. Document what you changed.
+- After verification, revert any temporary changes (the implementer or closer can decide if the example update should be permanent).
+
+6. Read test credentials from `~/.config/case/credentials` (use for .env files only — **never log credentials**)
+7. Load the `playwright-cli` skill for browser testing
+8. Navigate to the relevant page/flow:
    ```bash
    playwright-cli open
    playwright-cli goto http://localhost:3000
    ```
-8. Reproduce the exact scenario from the issue:
+9. Reproduce the exact scenario from the issue:
    - For a bug fix: trigger the conditions that caused the bug
    - For a feature: exercise the new capability specifically
-9. Verify the fix works — the specific behavior, not just "the app loads"
+10. Verify the fix works — the specific behavior, not just "the app loads"
 
 **Ask yourself: "If I reverted the implementer's commit, would this test fail?"** If the answer is no, you're testing the wrong thing.
+
+**Second check: "Is the app I'm looking at actually using the new code?"** If the imports haven't changed, the answer is no.
 
 ### 4. Capture Evidence
 

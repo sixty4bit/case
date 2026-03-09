@@ -150,10 +150,11 @@ _(Already done in the Arguments section above)_
 
 ### Step 3: Branch & Baseline
 
-1. Derive branch name from argument type:
-   - GitHub issue → `fix/issue-<N>` (e.g., `fix/issue-53`)
-   - Linear ID → `fix/<ID>` (e.g., `fix/DX-1234`)
-   - Free text → `fix/<slug>` (e.g., `fix/update-readme`)
+1. Derive branch name from argument type and issue kind:
+   - Determine prefix from issue labels/title: use `feat/` for feature requests, `fix/` for bugs, `chore/` for maintenance. Default to `fix/` if unclear.
+   - GitHub issue → `{prefix}/issue-<N>` (e.g., `fix/issue-53`, `feat/issue-364`)
+   - Linear ID → `{prefix}/<ID>` (e.g., `fix/DX-1234`)
+   - Free text → `{prefix}/<slug>` (e.g., `fix/update-readme`)
 2. Check if branch exists: `git branch --list <branch>`
    - Exists → `git checkout <branch>` (resume)
    - Not exists → `git checkout -b <branch>` (create)
@@ -244,18 +245,15 @@ Report to user:
      - Pipeline outcome: "completed" or "failed"
      - If failed: which agent failed and its AGENT_RESULT error
    - **subagent_type**: `general-purpose`
-3. Wait for completion
-4. Parse `AGENT_RESULT` from response
-5. If suggestions found, present them to the user via `AskUserQuestion`:
+   - **run_in_background**: `true` (retrospective runs async, doesn't block the pipeline)
+3. The retrospective agent **auto-applies** improvements directly to case/ files (docs, scripts, agents, hooks). High and medium priority fixes are applied immediately; low priority fixes are applied if straightforward.
+4. When the background agent completes, report to the user:
    ```
-   "Retrospective found <N> harness improvement(s): <summaries>"
-   Options:
-   - "Show details" — Display full improvement suggestions
-   - "Skip" — No harness changes needed right now
+   "Retrospective applied <N> harness improvement(s): <summary of changes>"
    ```
-6. If "Show details": display each IMPROVEMENT with its LOCATION, PRIORITY, and DETAIL. The user decides whether to apply them (manually or in a follow-up session).
+   Include the list of files changed from the AGENT_RESULT artifacts.
 
-**The retrospective never blocks the pipeline.** If it fails or produces no suggestions, the `/case` run is still complete. It's an optional improvement signal, not a gate.
+**The retrospective never blocks the pipeline.** It runs in the background after the PR is created. If it fails or produces no improvements, the `/case` run is still complete.
 
 ## Re-entry Semantics
 
@@ -308,6 +306,7 @@ Based on the user's request, load the relevant context:
 | Session management (authkit-session) | `../../docs/architecture/authkit-session.md` |
 | Skills plugin | `../../docs/architecture/skills-plugin.md` |
 | Bug fix in any repo | `../../docs/playbooks/fix-bug.md` |
+| Feature request in any repo | `../../docs/playbooks/add-feature.md` |
 | Cross-repo change | `../../docs/playbooks/cross-repo-update.md` |
 | Commit conventions | `../../docs/conventions/commits.md` |
 | Testing standards | `../../docs/conventions/testing.md` |

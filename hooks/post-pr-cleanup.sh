@@ -43,8 +43,12 @@ if [[ -f ".case-active" ]]; then
       # JSON path was attempted — do NOT fall through to file-move
       rm -f .case-active .case-tested .case-manual-tested
       exit 0
+    else
+      echo "WARNING: .case-active contains '${TASK_ID}' but task JSON not found at ${TASK_JSON}. Status will NOT transition to pr-opened." >&2
     fi
   fi
+else
+  echo "WARNING: .case-active not found — task JSON status will NOT transition to pr-opened and prUrl will NOT be set." >&2
 fi
 
 # Fallback ONLY for genuinely old-format tasks: no .task.json files exist in active/ at all

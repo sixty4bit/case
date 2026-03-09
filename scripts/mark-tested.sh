@@ -43,5 +43,9 @@ if [[ -f ".case-active" ]]; then
   TASK_JSON="${CASE_REPO}/tasks/active/${TASK_ID}.task.json"
   if [[ -n "$TASK_ID" && -f "$TASK_JSON" ]]; then
     bash "${CASE_REPO}/scripts/task-status.sh" "$TASK_JSON" tested true --from-marker 2>/dev/null || true
+  else
+    echo "WARNING: .case-active contains '${TASK_ID}' but task JSON not found at ${TASK_JSON}" >&2
   fi
+else
+  echo "WARNING: .case-active not found — task JSON 'tested' field will NOT be updated. Marker file created locally only." >&2
 fi
