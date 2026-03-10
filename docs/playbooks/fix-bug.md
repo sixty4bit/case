@@ -31,6 +31,8 @@ If the repo has a build step (`pnpm build`), run it to confirm the baseline is c
 
 ## Step 3: Reproduce the Bug
 
+> **`/case` pipeline note:** When running via the `/case` pipeline, bug reproduction is handled by the orchestrator (Step 3.5) *before* the implementer is spawned. The implementer receives the root cause analysis and reproduction evidence, so it can skip to writing a failing test and implementing the fix.
+
 Write a failing test first if possible. This is the strongest form of reproduction.
 
 ```bash
@@ -126,3 +128,5 @@ If the bug originates in a shared dependency (`authkit-session`), you may need t
 - **Skipping the test**. Every bug fix should add a test that would have caught the bug.
 - **Not checking related repos**. Session bugs often exist in multiple AuthKit packages.
 - **Bundling refactors with fixes**. Keep the fix commit separate from any cleanup.
+- **Calling redirect() in server actions to external URLs**. Next.js server actions run via fetch -- `redirect()` causes the browser to follow the HTTP redirect cross-origin, triggering CORS errors. Return the URL and let the client redirect via `window.location.href`.
+- **Forgetting async redirect guards**. `window.location.href = url` does not stop JS execution. If a `finally` block sets state (e.g., `setLoading(false)`), it will retrigger `useEffect` before navigation completes. Use a ref guard (`redirectingRef.current = true`) and bail out of callbacks while redirecting.

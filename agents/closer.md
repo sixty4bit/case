@@ -29,6 +29,14 @@ echo "$SESSION"
 
 Read the output to understand: current branch, last commits, task status, which agents have run, and what evidence exists. This replaces manual git log / task file discovery.
 
+### 0.5. Record Start
+
+Mark yourself as running with a start timestamp immediately:
+```bash
+bash /Users/nicknisi/Developer/case/scripts/task-status.sh <task.json> agent closer status running
+bash /Users/nicknisi/Developer/case/scripts/task-status.sh <task.json> agent closer started now
+```
+
 ### 1. Gather Context
 
 1. Read the task file (`.md`) — full content including progress log entries from all agents
@@ -80,9 +88,16 @@ Closes #<number>
 
 ### 3. Pre-flight
 
-Before running `gh pr create`, verify every requirement the hook will check:
+Before running `gh pr create`, verify every requirement the hook will check.
 
-1. **Branch**: Verify not on main/master
+**CRITICAL: Check the task JSON first.** Read the task JSON and confirm the reviewer agent phase shows `"status": "completed"`. If the reviewer never ran, STOP — do not attempt to create the PR. Report the missing reviewer phase in your error output so the orchestrator can dispatch the reviewer.
+
+1. **Reviewer ran**: Read the task JSON and confirm `agents.reviewer.status` is `"completed"`
+   ```bash
+   python3 -c "import json; d=json.load(open('<task.json>')); r=d.get('agents',{}).get('reviewer',{}); assert r.get('status')=='completed', f'Reviewer not completed: {r}'"
+   ```
+
+2. **Branch**: Verify not on main/master
    ```bash
    BRANCH=$(git branch --show-current)
    if [[ "$BRANCH" == "main" || "$BRANCH" == "master" ]]; then
@@ -90,12 +105,12 @@ Before running `gh pr create`, verify every requirement the hook will check:
    fi
    ```
 
-2. **Test evidence**: Read `.case-tested` — must exist with `output_hash` field
+3. **Test evidence**: Read `.case-tested` — must exist with `output_hash` field
    ```bash
    test -f .case-tested && grep -q "output_hash:" .case-tested
    ```
 
-3. **Manual test evidence** (conditional):
+4. **Manual test evidence** (conditional):
    ```bash
    # Only required if src/ files changed
    if git diff --name-only main | grep -q "^src/"; then
@@ -103,7 +118,7 @@ Before running `gh pr create`, verify every requirement the hook will check:
    fi
    ```
 
-4. **Review evidence**: Read `.case-reviewed` — must exist with `critical: 0`
+5. **Review evidence**: Read `.case-reviewed` — must exist with `critical: 0`
    ```bash
    test -f .case-reviewed && grep -q "critical: 0" .case-reviewed
    ```
@@ -155,6 +170,13 @@ Only post if there are actual findings to share. Skip this step if the reviewer 
    bash /Users/nicknisi/Developer/case/scripts/task-status.sh <task.json> agent closer completed now
    ```
    The hook will handle: `status → pr-opened` and `prUrl`.
+
+   **Fallback (MANDATORY)**: After `gh pr create` succeeds, ALWAYS verify `prUrl` was set by the hook. Read the task JSON and check if `prUrl` is non-null. If it's still `null`, extract the PR URL from the `gh pr create` output yourself and set it:
+   ```bash
+   # Always run this after gh pr create — the hook's URL extraction frequently fails
+   bash /Users/nicknisi/Developer/case/scripts/task-status.sh <task.json> prUrl "<PR URL>"
+   ```
+   The hook's URL extraction from tool output can fail silently — this ensures the task JSON always records the PR URL. This is not optional; a null `prUrl` makes the task record incomplete.
 
 2. **Append to the task file's Progress Log**:
    ```markdown

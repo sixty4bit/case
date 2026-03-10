@@ -39,6 +39,9 @@ if [[ -f ".case-active" ]]; then
       bash "${CASE_REPO}/scripts/task-status.sh" "$TASK_JSON" status pr-opened 2>&1 || echo "Warning: task-status update failed for ${TASK_ID}" >&2
       if [[ -n "$PR_URL" ]]; then
         bash "${CASE_REPO}/scripts/task-status.sh" "$TASK_JSON" prUrl "$PR_URL" 2>/dev/null || true
+      else
+        echo "WARNING: Could not extract PR URL from gh pr create output. prUrl will remain null in ${TASK_ID}.task.json" >&2
+        echo "  The closer agent should set prUrl manually if this warning appears." >&2
       fi
       # JSON path was attempted — do NOT fall through to file-move
       rm -f .case-active .case-tested .case-manual-tested .case-doom-loop-state .case-reviewed

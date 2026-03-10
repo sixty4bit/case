@@ -17,6 +17,7 @@ You receive from the orchestrator:
 - **Target repo path** — absolute path to the repo where you'll work
 - **Issue summary** — title, body, and key details from the GitHub/Linear issue
 - **Playbook path** — reference to the relevant playbook in `/Users/nicknisi/Developer/case/docs/playbooks/`
+- **Root cause analysis** (for bug fixes) — orchestrator's reproduction findings including affected files, root cause, and evidence
 
 ## Workflow
 
@@ -48,8 +49,8 @@ Read the output to understand: current branch, last commits, task status, which 
 
 Follow the playbook steps:
 
-1. **Reproduce the bug** — write a failing test that captures the issue, or document reproduction steps
-2. **Identify root cause** — read the relevant source code, trace the issue
+1. **Reproduce the bug** — write a failing test that captures the issue, or document reproduction steps. For bug fixes run via `/case`, the orchestrator has already reproduced the bug and identified the root cause — use that analysis to write a targeted failing test and skip to implementing the fix.
+2. **Identify root cause** — read the relevant source code, trace the issue (if root cause analysis was provided by the orchestrator, verify it and proceed directly to the fix)
 3. **Implement the fix** — make the minimum change that addresses the root cause
 4. **Verify the fix** — the failing test now passes
 
