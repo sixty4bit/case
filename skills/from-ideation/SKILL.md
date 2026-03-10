@@ -168,7 +168,7 @@ bash /Users/nicknisi/Developer/case/scripts/task-status.sh {task.json} agent imp
 
 3. Wait for completion
 
-4. Parse `AGENT_RESULT` from response (see Subagent Output Contract in case SKILL.md)
+4. Parse `AGENT_RESULT` from response (see Subagent Output Contract above)
 
 5. **If failed**:
    - Report to user via `AskUserQuestion`:
@@ -178,7 +178,7 @@ bash /Users/nicknisi/Developer/case/scripts/task-status.sh {task.json} agent imp
      ```
    - "Retry": re-spawn implementer for this phase
    - "Skip": move to next phase (risky — later phases may depend on this one)
-   - "Abort": go to Step 6 (Retrospective) with outcome "failed"
+   - "Abort": go to Step 8 (Failure Routing) with outcome "failed"
 
 6. **If completed**: Append to progress log and continue
 
@@ -224,9 +224,34 @@ After all phases are implemented and committed, run the full test suite.
    ```
 4. If any fail: attempt to fix, re-run. If unfixable, report to user.
 
+## Subagent Output Contract
+
+Every subagent ends its response with a JSON block between exact delimiters:
+
+```
+<<<AGENT_RESULT
+{
+  "status": "completed",
+  "summary": "one-line description",
+  "artifacts": {
+    "commit": "abc123",
+    "filesChanged": ["src/x.ts"],
+    "testsPassed": true,
+    "screenshotUrls": [],
+    "evidenceMarkers": [],
+    "prUrl": null,
+    "prNumber": null
+  },
+  "error": null
+}
+AGENT_RESULT>>>
+```
+
+**Parsing**: Search response for text between `<<<AGENT_RESULT` and `AGENT_RESULT>>>`, then parse as JSON. If delimiters not found, treat as failed with error "no structured output — raw response: <first 200 chars>".
+
 ## Step 5: Post-Implementation Pipeline
 
-Run the standard case pipeline for verification, review, and PR creation. These agents cover the **combined diff** from all phases.
+Run verification, review, and PR creation covering the **combined diff** from all phases.
 
 ### 5a. Spawn Verifier
 
@@ -235,16 +260,39 @@ Run the standard case pipeline for verification, review, and PR creation. These 
    bash /Users/nicknisi/Developer/case/scripts/task-status.sh {task.json} status verifying
    ```
 2. Read `/Users/nicknisi/Developer/case/agents/verifier.md`
-3. Use the `Agent` tool with verifier.md content + task context
+3. Use the `Agent` tool:
+   - **subagent_type**: `general-purpose`
+   - **prompt**: Full verifier.md content + task context:
+     - Task file path (`.md` and `.task.json`)
+     - Target repo path
 4. Parse `AGENT_RESULT`
-5. Handle failure: same as standard case pipeline (see case SKILL.md Step 5)
+5. **If failed**:
+   - Check if `src/` files changed: `git diff --name-only main | grep "^src/"`
+   - **If src/ changed** (verification mandatory — hook will block):
+     Use `AskUserQuestion`: "Verification failed: `{summary}`"
+     Options: "Fix and re-verify" | "Abort"
+   - **If NO src/ changed** (verification optional):
+     Use `AskUserQuestion`: "Verification failed: `{summary}`"
+     Options: "Fix and re-verify" | "Skip verification" | "Abort"
+   - "Abort": go to Step 8 (Retrospective) with outcome "failed" and failed agent "verifier"
+6. **If completed**: Continue to 5b
 
 ### 5b. Spawn Reviewer
 
 1. Read `/Users/nicknisi/Developer/case/agents/reviewer.md`
-2. Use the `Agent` tool with reviewer.md content + task context
+2. Use the `Agent` tool:
+   - **subagent_type**: `general-purpose`
+   - **prompt**: Full reviewer.md content + task context:
+     - Task file path (`.md` and `.task.json`)
+     - Target repo path
 3. Parse `AGENT_RESULT`
-4. Handle failure: same as standard case pipeline (see case SKILL.md Step 6)
+4. **If "blocked"** (critical findings):
+   Use `AskUserQuestion`: "Reviewer found `{N}` critical finding(s): `{details}`"
+   Options: "Re-implement and re-review" | "Override and continue" | "Abort"
+   - "Re-implement": go back to Step 3 for the affected phase, then re-run verifier and reviewer
+   - "Override": continue to 5c (note: pre-PR hook still requires `.case-reviewed`)
+   - "Abort": go to Step 8 (Retrospective) with outcome "failed"
+5. **If completed** (no critical findings): Continue to 5c
 
 ### 5c. Spawn Closer
 
@@ -253,30 +301,101 @@ Run the standard case pipeline for verification, review, and PR creation. These 
    bash /Users/nicknisi/Developer/case/scripts/task-status.sh {task.json} status closing
    ```
 2. Read `/Users/nicknisi/Developer/case/agents/closer.md`
-3. Use the `Agent` tool with closer.md content + task context + verifier/reviewer results
+3. Use the `Agent` tool:
+   - **subagent_type**: `general-purpose`
+   - **prompt**: Full closer.md content + task context:
+     - Task file path (`.md` and `.task.json`)
+     - Target repo path
+     - Verifier `AGENT_RESULT` (for testing evidence)
+     - Reviewer `AGENT_RESULT` (for review findings)
+     - **PR title**: `feat({scope}): {project-name} — {brief summary}`
+     - **Contract reference**: `{ideation-folder}/contract.md`
+     - **Phases implemented**: list of all phases with spec paths and commit hashes
 4. Parse `AGENT_RESULT`
-5. Handle failure: same as standard case pipeline (see case SKILL.md Step 7)
+5. **If failed**: Report to user via `AskUserQuestion`, suggest which steps to re-run. Go to Step 8.
+6. **If completed**: Continue to Step 6
 
-**PR title**: Use conventional commit format covering the contract scope:
-```
-feat(scope): {project-name} — {brief summary}
+## Closer Pre-PR Checklist (mandatory)
+
+The closer agent must verify every item below BEFORE running `gh pr create`. The pre-PR hook enforces this mechanically.
+
+- [ ] **Unit tests pass** — implementer ran and committed passing tests
+- [ ] **Types check** — implementer ran typecheck
+- [ ] **Lint passes** — implementer ran lint
+- [ ] **Build succeeds** — implementer ran build
+- [ ] **Test evidence exists**: `.case-tested` with `output_hash` (created in Step 4 via `mark-tested.sh`)
+- [ ] **Manual testing done** (if src/ files changed): `.case-manual-tested` with `evidence` (created by verifier via `mark-manual-tested.sh`)
+- [ ] **Code review passed**: `.case-reviewed` with `critical: 0` (created by reviewer via `mark-reviewed.sh`)
+- [ ] **Security audit** — if the change touches auth, session, token, cookie, or middleware code: load the `security-auditor` skill and run it. Skip for non-auth changes.
+- [ ] **Task file progress log updated** — all agents appended their entries
+- [ ] **Conventional commit** — implementer used `type(scope): description`
+- [ ] **PR description drafted** — includes: summary, phases, contract reference, testing evidence, screenshots, follow-ups
+
+## Verification Tools
+
+Use these to verify work beyond unit tests.
+
+**Preference order for front-end testing: Playwright first.** It runs headless, is scriptable, and produces artifacts.
+
+### Playwright (primary for front-end)
+
+Use the `playwright-cli` skill for browser automation:
+```bash
+playwright-cli open                          # open browser
+playwright-cli video-start                   # start recording
+playwright-cli goto https://localhost:3000   # navigate
+playwright-cli snapshot                      # get page snapshot with refs
+playwright-cli click e15                     # click element by ref
+playwright-cli screenshot                    # capture screenshot
+playwright-cli video-stop /tmp/verify.webm   # stop recording
 ```
 
-**PR description**: Should reference the ideation contract, list all phases implemented, and include verification evidence.
+### Test Credentials
+
+Credentials for testing sign-in flows: `~/.config/case/credentials`. **NEVER commit credentials.**
+
+### PR Verification Artifacts
+
+Upload screenshots/video for PR descriptions:
+```bash
+VIDEO=$(/Users/nicknisi/Developer/case/scripts/upload-screenshot.sh /tmp/verification.webm)
+SCREENSHOT=$(/Users/nicknisi/Developer/case/scripts/upload-screenshot.sh /tmp/after.png)
+```
+
+The verifier agent handles capture. The closer agent uses the uploaded markdown in the PR description.
 
 ## Step 6: Complete
 
 Report to user:
 - PR URL from closer's `AGENT_RESULT`
-- Summary: phases implemented, what was tested, what was reviewed
+- Summary of all phases implemented
+- What was tested (from verifier)
+- What was reviewed (from reviewer)
+- Contract reference
 
-## Step 7: Retrospective
+## Step 7: Spawn Retrospective
 
-Same as standard case pipeline — spawn retrospective in background:
+**Always runs** — after both successful and failed pipelines.
 
 1. Read `/Users/nicknisi/Developer/case/agents/retrospective.md`
-2. Spawn with `run_in_background: true`
-3. Include: task file path, task JSON, pipeline outcome, all agent results
+2. Use the `Agent` tool:
+   - **subagent_type**: `general-purpose`
+   - **prompt**: Full retrospective.md content + context:
+     - Task file path (with progress log from all agents)
+     - Task JSON path (with agent phases and timing)
+     - Pipeline outcome: "completed" or "failed"
+     - If failed: which agent failed and its AGENT_RESULT error
+   - **run_in_background**: `true`
+3. When the background agent completes, report improvements to user
+
+## Step 8: Failure Routing
+
+Every failure branch (Steps 2-5) routes to Step 7 (Retrospective) with:
+- Pipeline outcome: "failed"
+- Which agent failed
+- The failed agent's AGENT_RESULT (or error message)
+
+The retrospective runs even on failure — this is how the harness improves itself.
 
 ## Re-entry Semantics
 
