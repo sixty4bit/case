@@ -78,13 +78,13 @@ The pipeline's flow control (Steps 4-9) runs as a TypeScript program rather than
 
 ```bash
 # Dry run — logs phase transitions without spawning agents
-npx tsx src/index.ts --task tasks/active/cli-1-issue-53.task.json --dry-run
+bun src/index.ts --task tasks/active/cli-1-issue-53.task.json --dry-run
 
 # Full pipeline, attended (prompts human on failure)
-npx tsx src/index.ts --task tasks/active/cli-1-issue-53.task.json
+bun src/index.ts --task tasks/active/cli-1-issue-53.task.json
 
 # Full pipeline, unattended (auto-aborts on failure)
-npx tsx src/index.ts --task tasks/active/cli-1-issue-53.task.json --mode unattended
+bun src/index.ts --task tasks/active/cli-1-issue-53.task.json --mode unattended
 ```
 
 The `/case` skill dispatches to the orchestrator automatically after Step 3 (branch + baseline). You can also invoke it directly for existing task files.

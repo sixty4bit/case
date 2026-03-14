@@ -194,7 +194,7 @@ _(Already done in the Arguments section above)_
 Run the TypeScript orchestrator for the remainder of the pipeline (Steps 4-9):
 
 ```bash
-npx tsx /Users/nicknisi/Developer/case/src/index.ts --task <task.json path> --mode attended
+bun /Users/nicknisi/Developer/case/src/index.ts --task <task.json path> --mode attended
 ```
 
 The orchestrator handles Steps 4-9 deterministically via a while/switch loop. If it exits with code 0, the pipeline is complete. If it exits with code 1, check the task JSON and run log for failure details.

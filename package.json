@@ -14,8 +14,8 @@
     "format:check": "oxfmt --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "start": "tsx src/index.ts",
-    "serve": "tsx src/index.ts serve"
+    "start": "bun src/index.ts",
+    "serve": "bun src/index.ts serve"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.0"
@@ -24,7 +24,6 @@
     "@types/node": "^22.0.0",
     "oxfmt": "^0.40.0",
     "oxlint": "^1.55.0",
-    "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"
   }

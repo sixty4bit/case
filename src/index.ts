@@ -122,8 +122,8 @@ async function runServe(values: Record<string, unknown>) {
 function printUsage() {
   process.stdout.write(`
 Usage:
-  npx tsx src/index.ts [run] --task <path> [options]    Run pipeline for a task
-  npx tsx src/index.ts serve [options]                  Start as HTTP service
+  bun src/index.ts [run] --task <path> [options]    Run pipeline for a task
+  bun src/index.ts serve [options]                  Start as HTTP service
 
 Run options:
   --task, -t <path>         Path to .task.json file (required)
