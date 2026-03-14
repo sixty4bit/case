@@ -2,7 +2,6 @@
 
 <img width="500" height="500" alt="Gemini_Generated_Image_osdc2vosdc2vosdc-removebg-preview" src="https://github.com/user-attachments/assets/d00ab668-d26b-41d2-905b-751d3c0ff236" />
 
-
 A harness for orchestrating AI agent work across WorkOS open source projects.
 
 Inspired by [harness engineering](https://openai.com/index/harness-engineering/) and [effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) — the discipline of designing environments that let AI agents operate reliably at scale. Humans steer. Agents execute. When agents struggle, fix the harness.
@@ -54,26 +53,26 @@ Steps 0-3 (issue parsing, task creation, branch setup) are handled by the LLM or
 
 ### The Agents
 
-| Agent | Responsibility | Never does |
-|---|---|---|
-| **Orchestrator** | Parse issue, create task, smoke test, dispatch agents | Write code, run Playwright |
-| **Implementer** | Write fix, run unit tests, commit (with WIP checkpoints), read repo learnings | Start example apps, create PRs |
-| **Verifier** | Test the specific fix with Playwright, create evidence | Edit code, commit |
-| **Reviewer** | Review diff against golden principles, classify findings, gate PR creation | Edit code, commit, run tests |
-| **Closer** | Create PR with thorough description, satisfy hooks, post review comments | Edit code, run tests |
-| **Retrospective** | Analyze the run, apply harness improvements directly, maintain per-repo learnings | Edit target repo code |
+| Agent             | Responsibility                                                                    | Never does                     |
+| ----------------- | --------------------------------------------------------------------------------- | ------------------------------ |
+| **Orchestrator**  | Parse issue, create task, smoke test, dispatch agents                             | Write code, run Playwright     |
+| **Implementer**   | Write fix, run unit tests, commit (with WIP checkpoints), read repo learnings     | Start example apps, create PRs |
+| **Verifier**      | Test the specific fix with Playwright, create evidence                            | Edit code, commit              |
+| **Reviewer**      | Review diff against golden principles, classify findings, gate PR creation        | Edit code, commit, run tests   |
+| **Closer**        | Create PR with thorough description, satisfy hooks, post review comments          | Edit code, run tests           |
+| **Retrospective** | Analyze the run, apply harness improvements directly, maintain per-repo learnings | Edit target repo code          |
 
 ## Programmatic Orchestrator
 
-The pipeline's flow control (Steps 4-9) runs as a TypeScript program rather than LLM-interpreted prose. The LLM still does the work *inside* each phase (writing code, testing, reviewing), but the transitions *between* phases are deterministic `if/else` branches.
+The pipeline's flow control (Steps 4-9) runs as a TypeScript program rather than LLM-interpreted prose. The LLM still does the work _inside_ each phase (writing code, testing, reviewing), but the transitions _between_ phases are deterministic `if/else` branches.
 
-| Concern | Before (prose in SKILL.md) | After (TypeScript orchestrator) |
-|---|---|---|
-| Phase transitions | LLM reads a table and decides | `switch(currentPhase)` returns `nextPhase` |
-| Retry cap | Doom-loop hook fires after 3 identical failures | `maxRetries: 1` checked before spawning |
+| Concern                | Before (prose in SKILL.md)                             | After (TypeScript orchestrator)                       |
+| ---------------------- | ------------------------------------------------------ | ----------------------------------------------------- |
+| Phase transitions      | LLM reads a table and decides                          | `switch(currentPhase)` returns `nextPhase`            |
+| Retry cap              | Doom-loop hook fires after 3 identical failures        | `maxRetries: 1` checked before spawning               |
 | Resume after interrupt | LLM reads status table, hopefully picks the right step | `determineEntryPhase(task)` returns the correct phase |
-| Context per agent | LLM decides what to include | `assemblePrompt()` gives each role only what it needs |
-| Attended vs unattended | Not supported | `--mode unattended` auto-aborts on failure |
+| Context per agent      | LLM decides what to include                            | `assemblePrompt()` gives each role only what it needs |
+| Attended vs unattended | Not supported                                          | `--mode unattended` auto-aborts on failure            |
 
 ### Usage
 
@@ -161,6 +160,7 @@ claude plugin install case
 Restart Claude Code after installing. The `/case` skill will be available in all sessions.
 
 To update after changes:
+
 ```bash
 claude plugin uninstall case && claude plugin marketplace update && claude plugin install case
 ```
@@ -231,15 +231,16 @@ claude --worktree -p "Execute the task in tasks/active/authkit-nextjs-1-fix-cook
 
 Case uses Claude Code hooks to mechanically enforce the pre-PR checklist. Hooks only activate during `/case` workflows (when `.case-active` marker exists).
 
-| Hook | Trigger | What it enforces |
-| --- | --- | --- |
-| `pre-pr-check.sh` | `gh pr create` | Evidence-based test markers (not bare `touch`), manual testing evidence if src/ changed, review evidence (`.case-reviewed` with `critical: 0`), verification notes in PR body, feature branch |
-| `pre-push-check.sh` | `git push` | Not pushing to main/master |
-| `pre-commit-check.sh` | `git commit` | Conventional commit format |
-| `post-pr-cleanup.sh` | `gh pr create` (after) | Updates task JSON status to `pr-opened`, cleans up markers |
-| `doom-loop-detect.sh` | Any Bash command (after) | Detects 3+ consecutive identical failures, forces agents to try a different approach |
+| Hook                  | Trigger                  | What it enforces                                                                                                                                                                              |
+| --------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pre-pr-check.sh`     | `gh pr create`           | Evidence-based test markers (not bare `touch`), manual testing evidence if src/ changed, review evidence (`.case-reviewed` with `critical: 0`), verification notes in PR body, feature branch |
+| `pre-push-check.sh`   | `git push`               | Not pushing to main/master                                                                                                                                                                    |
+| `pre-commit-check.sh` | `git commit`             | Conventional commit format                                                                                                                                                                    |
+| `post-pr-cleanup.sh`  | `gh pr create` (after)   | Updates task JSON status to `pr-opened`, cleans up markers                                                                                                                                    |
+| `doom-loop-detect.sh` | Any Bash command (after) | Detects 3+ consecutive identical failures, forces agents to try a different approach                                                                                                          |
 
 Evidence markers are created by scripts that verify work was actually done:
+
 - `mark-tested.sh` — requires piped test output, records SHA-256 hash. Supports structured JSON reporter input via `parse-test-output.sh`. Rejects bare `touch`.
 - `mark-manual-tested.sh` — requires recent Playwright screenshots. Rejects without evidence.
 - `mark-reviewed.sh` — requires `--critical 0` (no unresolved critical findings from reviewer). Rejects if critical findings exist.
@@ -337,13 +338,13 @@ scripts/
 
 ## Target Repos (v1)
 
-| Repo | Path | Purpose |
-| --- | --- | --- |
-| cli | `../cli/main` | WorkOS CLI |
-| skills | `../skills` | Claude Code skills plugin |
-| authkit-session | `../authkit-session` | Framework-agnostic session management |
-| authkit-tanstack-start | `../authkit-tanstack-start` | AuthKit TanStack Start SDK |
-| authkit-nextjs | `../authkit-nextjs` | AuthKit Next.js SDK |
+| Repo                   | Path                        | Purpose                               |
+| ---------------------- | --------------------------- | ------------------------------------- |
+| cli                    | `../cli/main`               | WorkOS CLI                            |
+| skills                 | `../skills`                 | Claude Code skills plugin             |
+| authkit-session        | `../authkit-session`        | Framework-agnostic session management |
+| authkit-tanstack-start | `../authkit-tanstack-start` | AuthKit TanStack Start SDK            |
+| authkit-nextjs         | `../authkit-nextjs`         | AuthKit Next.js SDK                   |
 
 The manifest (`projects.json`) and all tooling are designed to scale to 25+ repos. Add a new repo by appending to `projects.json`.
 

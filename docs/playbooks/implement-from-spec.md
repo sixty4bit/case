@@ -14,15 +14,15 @@ Read the spec file in full. If it references a template (`spec-template-*.md`), 
 
 Extract and retain:
 
-| Section | What to use it for |
-|---|---|
-| Technical Approach | Overall strategy — understand before coding |
-| Feedback Strategy | Inner-loop command and playground type — set up before coding |
-| File Changes | New files, modified files — your scope of work |
-| Implementation Details | Per-component instructions with code patterns — your implementation guide |
-| Per-component Feedback Loops | Playground, experiment, check command — your inner loop per component |
-| Testing Requirements | What tests to write |
-| Validation Commands | What to run at the end (typecheck, lint, test, build) |
+| Section                      | What to use it for                                                        |
+| ---------------------------- | ------------------------------------------------------------------------- |
+| Technical Approach           | Overall strategy — understand before coding                               |
+| Feedback Strategy            | Inner-loop command and playground type — set up before coding             |
+| File Changes                 | New files, modified files — your scope of work                            |
+| Implementation Details       | Per-component instructions with code patterns — your implementation guide |
+| Per-component Feedback Loops | Playground, experiment, check command — your inner loop per component     |
+| Testing Requirements         | What tests to write                                                       |
+| Validation Commands          | What to run at the end (typecheck, lint, test, build)                     |
 
 **The spec is your authority.** Follow its implementation details literally. Don't improvise beyond what's specified.
 
@@ -88,6 +88,7 @@ Fix any failures before proceeding.
 3. Append to the task file's Progress Log:
    ```markdown
    ### Implementer — {timestamp}
+
    - Spec: {spec-file-path}
    - Components: {list of components implemented}
    - Files changed: {count} ({list})

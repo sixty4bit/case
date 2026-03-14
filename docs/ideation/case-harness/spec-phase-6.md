@@ -24,10 +24,10 @@ The plugin depends on the `skills` plugin for WorkOS domain knowledge. Case prov
 
 ### New Files
 
-| File Path | Purpose |
-| --- | --- |
-| `.claude-plugin/plugin.json` | Plugin manifest — declares the case plugin |
-| `skills/case/SKILL.md` | The /case skill — router that loads harness context based on task |
+| File Path                    | Purpose                                                           |
+| ---------------------------- | ----------------------------------------------------------------- |
+| `.claude-plugin/plugin.json` | Plugin manifest — declares the case plugin                        |
+| `skills/case/SKILL.md`       | The /case skill — router that loads harness context based on task |
 
 ## Implementation Details
 
@@ -38,6 +38,7 @@ The plugin depends on the `skills` plugin for WorkOS domain knowledge. Case prov
 **Overview**: Declares case as a Claude Code plugin with its skills directory.
 
 **Implementation steps**:
+
 1. Read ../skills/.claude-plugin/plugin.json to understand the format
 2. Create minimal plugin.json for case
 3. Declare skills directory path
@@ -53,6 +54,7 @@ The plugin depends on the `skills` plugin for WorkOS domain knowledge. Case prov
 ```
 
 **Key decisions**:
+
 - Keep the manifest minimal — the skill does the heavy lifting
 - No marketplace.json needed for v1 (internal use only)
 
@@ -63,12 +65,14 @@ The plugin depends on the `skills` plugin for WorkOS domain knowledge. Case prov
 **Overview**: The main entry point skill. When invoked, it reads the task context and loads the relevant harness docs. It functions as a router — not a dump of all harness content.
 
 **Key decisions**:
+
 - Skill is a markdown file that Claude Code reads and follows
 - Uses progressive disclosure: always loads the landscape (projects.json summary) and conventions overview, then drills into specific architecture/playbook docs based on the task
 - References docs by path — Claude Code can then read those files
 - Includes task dispatch instructions (how to use tasks/active/)
 
 **Skill structure**:
+
 ```markdown
 # Case — WorkOS OSS Harness
 
@@ -77,6 +81,7 @@ You are operating within the Case harness for WorkOS open source projects.
 ## Always Load
 
 Read these first:
+
 - `AGENTS.md` — project landscape and navigation
 - `docs/golden-principles.md` — invariants to follow
 
@@ -84,19 +89,20 @@ Read these first:
 
 Based on the user's request, load the relevant context:
 
-| If the task involves... | Read... |
-| --- | --- |
-| The CLI | `docs/architecture/cli.md` + `docs/playbooks/add-cli-command.md` |
+| If the task involves...       | Read...                                                                              |
+| ----------------------------- | ------------------------------------------------------------------------------------ |
+| The CLI                       | `docs/architecture/cli.md` + `docs/playbooks/add-cli-command.md`                     |
 | AuthKit framework integration | `docs/architecture/authkit-framework.md` + `docs/playbooks/add-authkit-framework.md` |
-| Session management | `docs/architecture/authkit-session.md` |
-| Skills plugin | `docs/architecture/skills-plugin.md` |
-| Bug fix | `docs/playbooks/fix-bug.md` |
-| Cross-repo change | `docs/playbooks/cross-repo-update.md` |
-| Conventions/style | `docs/conventions/` (read the relevant file) |
+| Session management            | `docs/architecture/authkit-session.md`                                               |
+| Skills plugin                 | `docs/architecture/skills-plugin.md`                                                 |
+| Bug fix                       | `docs/playbooks/fix-bug.md`                                                          |
+| Cross-repo change             | `docs/playbooks/cross-repo-update.md`                                                |
+| Conventions/style             | `docs/conventions/` (read the relevant file)                                         |
 
 ## Task Dispatch
 
 If the user wants to create a task for async execution:
+
 1. Choose the right template from `tasks/templates/`
 2. Fill in the placeholders
 3. Save to `tasks/active/{repo}-{n}-{slug}.md`
@@ -104,6 +110,7 @@ If the user wants to create a task for async execution:
 ## Working in a Target Repo
 
 Before making changes in any target repo:
+
 1. Read that repo's AGENTS.md
 2. Run `scripts/bootstrap.sh {repo-name}` to verify readiness
 3. Follow the repo's PR checklist before opening a PR
@@ -112,6 +119,7 @@ Before making changes in any target repo:
 ## Improving the Harness
 
 When an agent struggles or produces poor output, the fix goes into case/, not the code:
+
 - Missing pattern? → Add to docs/architecture/
 - Unclear convention? → Update docs/conventions/
 - Recurring task? → Add a playbook + template
@@ -119,6 +127,7 @@ When an agent struggles or produces poor output, the fix goes into case/, not th
 ```
 
 **Implementation steps**:
+
 1. Read ../skills router skill for format reference
 2. Write SKILL.md with routing table covering all Phase 3 docs and Phase 4 playbooks
 3. Include task dispatch instructions referencing Phase 4 templates
@@ -126,6 +135,7 @@ When an agent struggles or produces poor output, the fix goes into case/, not th
 5. Test by installing plugin and invoking /case with different task descriptions
 
 **Feedback loop**:
+
 - **Playground**: Install plugin in Claude Code, invoke /case with various prompts
 - **Experiment**: Test with "add a CLI command", "fix a bug in authkit-nextjs", "update README across repos" — verify each routes to the right docs
 - **Check command**: `grep -c "docs/" skills/case/SKILL.md` (verify doc references exist)

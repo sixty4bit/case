@@ -25,11 +25,13 @@ The goal is to adopt harness engineering: build the environment so that agents c
 ## Success Metrics
 
 **Quantitative (tracked over time):**
+
 - **First-pass PR success rate** — % of agent PRs that pass CI and are mergeable without human code edits. Target: >70% within 4 weeks.
 - **Human interventions per task** — average number of times the engineer has to course-correct an agent mid-task. Target: <2 per task.
 - **Task-to-PR time** — elapsed time from task file creation to PR opened. Baseline TBD after first 10 tasks.
 
 **Qualitative (pass/fail):**
+
 - [ ] An agent given `tasks/active/cli-*.md` produces a correct, test-passing PR in `../cli/main`
 - [ ] An agent given `tasks/active/authkit-*.md` produces a reviewable PR in the target AuthKit repo
 - [ ] `AGENTS.md` routes agents to the correct repo, playbook, and conventions for any task across the 5 v1 repos
@@ -47,6 +49,7 @@ The goal is to adopt harness engineering: build the environment so that agents c
 ### In Scope
 
 **V1 Target Repos (5):**
+
 - `../cli/main` — WorkOS CLI (TypeScript, pnpm)
 - `../skills` — Claude Code plugin for WorkOS skills (TypeScript, pnpm)
 - `../authkit-session` — Framework-agnostic session management (TypeScript, pnpm)
@@ -54,6 +57,7 @@ The goal is to adopt harness engineering: build the environment so that agents c
 - `../authkit-nextjs` — AuthKit Next.js SDK (TypeScript, pnpm)
 
 **Spine (case/ repo):**
+
 - `AGENTS.md` — workspace-level navigation/routing (~100 lines, map not manual)
 - `docs/architecture/` — canonical patterns for each repo type
 - `docs/conventions/` — shared rules (commits, testing, PRs, linting, file size limits)
@@ -64,22 +68,26 @@ The goal is to adopt harness engineering: build the environment so that agents c
 - `scripts/bootstrap.sh` — per-repo setup verification (deps installed, tests pass, build works)
 
 **Task System:**
+
 - `tasks/active/` — current task files for agent execution
 - `tasks/done/` — completed tasks (moved after PR merge)
 - `tasks/templates/` — reusable task templates per playbook type
 - Naming convention: `{repo}-{n}-{slug}.md` for single-repo, `x-{n}-{slug}.md` for cross-repo
 
 **Per-Repo AGENTS.md (first-class deliverable):**
+
 - Create or upgrade AGENTS.md in each of the 5 v1 repos
 - Standard sections: do/don't rules, commands (lint/test/typecheck/build), project structure, PR checklist, patterns to follow/avoid
 - Each repo's AGENTS.md is self-sufficient — an agent landing in that repo alone can do competent work
 
 **Plugin Infrastructure:**
+
 - Claude Code plugin structure (`.claude-plugin/`)
 - `/case` skill that loads harness context (landscape, conventions, relevant playbook) based on task description
 - Dependency on `skills` plugin for WorkOS domain knowledge
 
 **Golden Principles + Enforcement:**
+
 - Documented invariants (naming conventions, boundary validation, file size limits, structured logging)
 - `scripts/check.sh` validates adherence across repos
 - Lint error messages include remediation instructions (agent reads how to fix directly from error output)
@@ -129,17 +137,20 @@ Phase 1: Spine Foundation
 **Strategy**: Hybrid — sequential start, then parallel groups.
 
 1. **Phase 1** — Spine Foundation _(blocking, must complete first)_
+
    ```bash
    /execute-spec docs/ideation/case-harness/spec-phase-1.md
    ```
 
 2. **Phases 2 & 3** — parallel after Phase 1
+
    ```bash
    /execute-spec docs/ideation/case-harness/spec-phase-2.md
    /execute-spec docs/ideation/case-harness/spec-phase-3.md
    ```
 
 3. **Phases 4 & 5** — parallel after Phase 3
+
    ```bash
    /execute-spec docs/ideation/case-harness/spec-phase-4.md
    /execute-spec docs/ideation/case-harness/spec-phase-5.md

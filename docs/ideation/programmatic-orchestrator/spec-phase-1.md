@@ -19,21 +19,21 @@ All script invocations use `execFile` (via `node:child_process`) instead of `exe
 
 ### New Files
 
-| File Path | Purpose |
-|-----------|---------|
-| `package.json` | Project manifest with dependencies |
-| `tsconfig.json` | TypeScript config (strict, ESM, ES2022) |
-| `vitest.config.ts` | Test runner config |
-| `src/types.ts` | All shared type definitions |
-| `src/util/parse-agent-result.ts` | Extract + validate AGENT_RESULT JSON from agent output |
-| `src/util/run-script.ts` | Safe script runner using execFile |
-| `src/util/logger.ts` | Structured JSON-lines logger to stderr |
-| `src/state/task-store.ts` | Read/write task.json via task-status.sh wrapper |
-| `src/state/transitions.ts` | Determine pipeline entry phase from task state |
-| `src/config.ts` | Load projects.json, resolve paths, build PipelineConfig |
-| `src/agent-runner.ts` | Spawn Claude Code via SDK, stream output, parse AGENT_RESULT |
-| `src/__tests__/parse-agent-result.test.ts` | Tests for AGENT_RESULT parser |
-| `src/__tests__/transitions.test.ts` | Tests for entry phase determination |
+| File Path                                  | Purpose                                                      |
+| ------------------------------------------ | ------------------------------------------------------------ |
+| `package.json`                             | Project manifest with dependencies                           |
+| `tsconfig.json`                            | TypeScript config (strict, ESM, ES2022)                      |
+| `vitest.config.ts`                         | Test runner config                                           |
+| `src/types.ts`                             | All shared type definitions                                  |
+| `src/util/parse-agent-result.ts`           | Extract + validate AGENT_RESULT JSON from agent output       |
+| `src/util/run-script.ts`                   | Safe script runner using execFile                            |
+| `src/util/logger.ts`                       | Structured JSON-lines logger to stderr                       |
+| `src/state/task-store.ts`                  | Read/write task.json via task-status.sh wrapper              |
+| `src/state/transitions.ts`                 | Determine pipeline entry phase from task state               |
+| `src/config.ts`                            | Load projects.json, resolve paths, build PipelineConfig      |
+| `src/agent-runner.ts`                      | Spawn Claude Code via SDK, stream output, parse AGENT_RESULT |
+| `src/__tests__/parse-agent-result.test.ts` | Tests for AGENT_RESULT parser                                |
+| `src/__tests__/transitions.test.ts`        | Tests for entry phase determination                          |
 
 ## Implementation Details
 

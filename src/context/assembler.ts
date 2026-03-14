@@ -111,10 +111,7 @@ function appendImplementerContext(
   }
 }
 
-function appendCloserContext(
-  lines: string[],
-  previousResults: Map<AgentName, AgentResult>,
-): void {
+function appendCloserContext(lines: string[], previousResults: Map<AgentName, AgentResult>): void {
   const verifierResult = previousResults.get('verifier');
   const reviewerResult = previousResults.get('reviewer');
 

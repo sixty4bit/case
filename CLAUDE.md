@@ -22,6 +22,7 @@ It provides the cross-cutting knowledge, conventions, and task dispatch that no 
 ## What Belongs Here vs In Individual Repos
 
 **In case/:**
+
 - Cross-repo conventions and golden principles
 - Architecture patterns that span multiple repos
 - Playbooks for recurring operations
@@ -30,6 +31,7 @@ It provides the cross-cutting knowledge, conventions, and task dispatch that no 
 - The /case Claude Code plugin skill
 
 **In individual repos:**
+
 - CLAUDE.md (or CLAUDE.local.md) with repo-specific instructions
 - Repo-specific CI, linters, test config
 - Code and tests

@@ -21,15 +21,15 @@ This phase runs last because it must reflect all changes from the other phases. 
 
 ### Modified Files
 
-| File Path | Changes |
-| --- | --- |
-| `AGENTS.md` | Add reviewer to pipeline, reference session-start, reference entropy scanning, update navigation table, update task lifecycle |
-| `docs/golden-principles.md` | Review for completeness — any new invariants from Phases 1-4 |
-| `docs/playbooks/README.md` | Update if any playbook references need revision |
-| `docs/playbooks/fix-bug.md` | Update pipeline steps to include reviewer |
-| `docs/playbooks/add-feature.md` | Update pipeline steps to include reviewer |
-| `docs/conventions/README.md` | Verify all convention docs are listed (entropy-management added in Phase 4) |
-| `tasks/README.md` | Update task lifecycle to include reviewer step and structured test output |
+| File Path                       | Changes                                                                                                                       |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `AGENTS.md`                     | Add reviewer to pipeline, reference session-start, reference entropy scanning, update navigation table, update task lifecycle |
+| `docs/golden-principles.md`     | Review for completeness — any new invariants from Phases 1-4                                                                  |
+| `docs/playbooks/README.md`      | Update if any playbook references need revision                                                                               |
+| `docs/playbooks/fix-bug.md`     | Update pipeline steps to include reviewer                                                                                     |
+| `docs/playbooks/add-feature.md` | Update pipeline steps to include reviewer                                                                                     |
+| `docs/conventions/README.md`    | Verify all convention docs are listed (entropy-management added in Phase 4)                                                   |
+| `tasks/README.md`               | Update task lifecycle to include reviewer step and structured test output                                                     |
 
 ## Implementation Details
 
@@ -38,6 +38,7 @@ This phase runs last because it must reflect all changes from the other phases. 
 **Pattern to follow**: Current AGENTS.md (concise routing map, ~50 lines, table format)
 
 **Overview**: The primary entry point for agents needs to reflect:
+
 1. The reviewer agent in the pipeline (implementer → verifier → reviewer → closer)
 2. The session-start script as the first thing every agent runs
 3. Entropy scanning as a maintenance tool
@@ -68,6 +69,7 @@ Pipeline: implementer → verifier → reviewer → closer → (retrospective)
 ```
 
 **Implementation steps**:
+
 1. Read current AGENTS.md
 2. Add reviewer to pipeline description
 3. Add session-start to working steps
@@ -75,6 +77,7 @@ Pipeline: implementer → verifier → reviewer → closer → (retrospective)
 5. Keep it under ~60 lines (concise routing map, not a manual)
 
 **Feedback loop**:
+
 - **Playground**: Read AGENTS.md and verify it accurately routes to all new artifacts
 - **Experiment**: For each new artifact (session-start, reviewer, entropy-scan, parse-test-output), verify AGENTS.md either mentions it or points to the doc that does
 - **Check command**: `wc -l AGENTS.md` (should stay under 70 lines)
@@ -84,6 +87,7 @@ Pipeline: implementer → verifier → reviewer → closer → (retrospective)
 **Pattern to follow**: `tasks/README.md` current format
 
 **Overview**: Update the task file format spec and lifecycle to reflect:
+
 1. Reviewer as a pipeline step (status: `reviewing` between `verifying` and `closing`)
 2. `.case-reviewed` as an evidence marker
 3. Structured test output fields in `.case-tested`
@@ -91,6 +95,7 @@ Pipeline: implementer → verifier → reviewer → closer → (retrospective)
 **Key changes**:
 
 1. Add `reviewing` to the status lifecycle:
+
 ```
 active → implementing → verifying → reviewing → closing → pr-opened → merged
 ```
@@ -98,6 +103,7 @@ active → implementing → verifying → reviewing → closing → pr-opened �
 2. Add `.case-reviewed` to evidence markers section
 
 3. Document the richer `.case-tested` format (from Phase 1):
+
 ```
 timestamp: ...
 output_hash: ...
@@ -110,6 +116,7 @@ files: [...]
 ```
 
 **Implementation steps**:
+
 1. Read `tasks/README.md`
 2. Update status lifecycle
 3. Add reviewing step description
@@ -121,6 +128,7 @@ files: [...]
 **Overview**: Both `fix-bug.md` and `add-feature.md` describe the pipeline steps. Update them to include the reviewer step.
 
 **Implementation steps**:
+
 1. Read each playbook
 2. Insert reviewer step between verify and PR creation
 3. Keep changes minimal — just add the step, don't restructure
@@ -128,10 +136,12 @@ files: [...]
 ### Golden principles review
 
 **Overview**: Check if Phases 1-4 introduced any new invariants that should be documented. Candidates:
+
 - "Every PR must pass code review" (enforced via `.case-reviewed` gate)
 - "Test output should use JSON reporter when available" (advisory)
 
 **Implementation steps**:
+
 1. Read `docs/golden-principles.md`
 2. Assess whether the new artifacts warrant new principles
 3. Add only if they represent true cross-repo invariants (not case-internal rules)
@@ -141,6 +151,7 @@ files: [...]
 **Overview**: Beyond the specific files above, scan all docs for stale references, broken links, or outdated information. This catches pre-existing documentation debt that predates this project.
 
 **Implementation steps**:
+
 1. List all files in `docs/`, `agents/`, `tasks/`, `scripts/`
 2. For each doc file, verify:
    - Internal cross-references point to files that exist

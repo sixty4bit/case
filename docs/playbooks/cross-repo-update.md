@@ -18,13 +18,13 @@ Before touching any repo, write down:
 2. **Why** this needs to be coordinated (vs independent changes).
 3. **Which repos** are affected. Check `projects.json`:
 
-| Name | Path |
-|------|------|
-| cli | `../cli/main` |
-| skills | `../skills` |
-| authkit-session | `../authkit-session` |
+| Name                   | Path                        |
+| ---------------------- | --------------------------- |
+| cli                    | `../cli/main`               |
+| skills                 | `../skills`                 |
+| authkit-session        | `../authkit-session`        |
 | authkit-tanstack-start | `../authkit-tanstack-start` |
-| authkit-nextjs | `../authkit-nextjs` |
+| authkit-nextjs         | `../authkit-nextjs`         |
 
 4. **Dependency order** -- if repos depend on each other, changes must merge in order. Typical order:
    ```
@@ -55,13 +55,13 @@ For each affected repo:
 2. **Make the change**.
 3. **Run all checks**:
 
-| Repo | Checks |
-|------|--------|
-| cli | `pnpm test && pnpm typecheck && pnpm lint && pnpm format && pnpm build` |
-| skills | `pnpm test && pnpm lint && pnpm format` |
-| authkit-session | `pnpm test && pnpm run typecheck && pnpm run build && pnpm run format` |
-| authkit-tanstack-start | `pnpm test && pnpm run typecheck && pnpm build && pnpm run format` |
-| authkit-nextjs | `pnpm test && pnpm run typecheck && pnpm run lint && pnpm run build && pnpm run format` |
+| Repo                   | Checks                                                                                  |
+| ---------------------- | --------------------------------------------------------------------------------------- |
+| cli                    | `pnpm test && pnpm typecheck && pnpm lint && pnpm format && pnpm build`                 |
+| skills                 | `pnpm test && pnpm lint && pnpm format`                                                 |
+| authkit-session        | `pnpm test && pnpm run typecheck && pnpm run build && pnpm run format`                  |
+| authkit-tanstack-start | `pnpm test && pnpm run typecheck && pnpm build && pnpm run format`                      |
+| authkit-nextjs         | `pnpm test && pnpm run typecheck && pnpm run lint && pnpm run build && pnpm run format` |
 
 4. **Open a PR** with a conventional commit message. Reference the cross-repo task or related PRs in the description.
 

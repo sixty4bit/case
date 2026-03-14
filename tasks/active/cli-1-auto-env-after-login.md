@@ -60,6 +60,7 @@ User reported: logged in successfully, then `workos env list` showed "No environ
 <!-- Agents append entries below. Do not edit existing entries. -->
 
 ### Implementer — 2026-03-09T20:23:00Z
+
 - Root cause: `login.ts` completed OAuth flow and saved credentials but never used the access token to fetch staging environment credentials, requiring users to manually run `workos env add`
 - Fix: Added `provisionStagingEnvironment()` function in `login.ts` that calls `fetchStagingCredentials()` after successful login and saves the result as a "staging" environment in the config store. Wrapped in try/catch so failures are non-fatal (prints hint instead).
 - Files changed: `src/commands/login.ts`, `src/commands/login.spec.ts`
@@ -67,6 +68,7 @@ User reported: logged in successfully, then `workos env list` showed "No environ
 - Commit: e6c8df9
 
 ### Verifier — 2026-03-09T20:39:00Z
+
 - Tested: Auto-provisioning of staging environment after login -- success path, failure paths (403/404/network/timeout), active env preservation, env update, non-fatal error handling
 - How: Read full diff of login.ts and login.spec.ts, reviewed staging-api.ts and config-store.ts for type compatibility, ran `pnpm test` (1030/1030 pass including 8 new), `pnpm typecheck` (clean), `pnpm build` (clean). Verified provisionStagingEnvironment is called after saveCredentials in runLogin, wrapped in try/catch, returns boolean not void. Confirmed all error paths return false and never throw. Confirmed active env logic correctly uses `isFirst || !config.activeEnvironment` guard.
 - Result: PASS
@@ -75,6 +77,7 @@ User reported: logged in successfully, then `workos env list` showed "No environ
 - Note: CLI-only change -- no frontend UI to test with Playwright. Verification based on code review, type safety, and comprehensive test execution.
 
 ### Closer — 2026-03-09T21:04:10Z
+
 - PR created: https://github.com/workos/cli/pull/89
 - Title: feat(auth): auto-provision staging environment after login
 - Status: pr-opened

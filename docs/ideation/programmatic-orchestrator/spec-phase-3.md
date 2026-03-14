@@ -17,19 +17,19 @@ Phase 3 wires everything together: the pipeline runner (core loop), notification
 
 ### New Files
 
-| File Path | Purpose |
-|-----------|---------|
-| `src/pipeline.ts` | Core pipeline loop — while/switch replacing SKILL.md Steps 4-9 |
-| `src/notify.ts` | Notification system — attended (readline) vs unattended (auto-abort) |
-| `src/index.ts` | CLI entry point — argument parsing, config building, pipeline invocation |
-| `src/__tests__/pipeline.test.ts` | Tests for pipeline flow control |
+| File Path                        | Purpose                                                                  |
+| -------------------------------- | ------------------------------------------------------------------------ |
+| `src/pipeline.ts`                | Core pipeline loop — while/switch replacing SKILL.md Steps 4-9           |
+| `src/notify.ts`                  | Notification system — attended (readline) vs unattended (auto-abort)     |
+| `src/index.ts`                   | CLI entry point — argument parsing, config building, pipeline invocation |
+| `src/__tests__/pipeline.test.ts` | Tests for pipeline flow control                                          |
 
 ### Modified Files
 
-| File Path | Changes |
-|-----------|---------|
-| `tasks/task.schema.json` | Add `mode` field |
-| `skills/case/SKILL.md` | Add orchestrator dispatch section after Step 3 |
+| File Path                | Changes                                        |
+| ------------------------ | ---------------------------------------------- |
+| `tasks/task.schema.json` | Add `mode` field                               |
+| `skills/case/SKILL.md`   | Add orchestrator dispatch section after Step 3 |
 
 ## Validation Commands
 

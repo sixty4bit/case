@@ -42,7 +42,7 @@ docs/playbooks/implement-from-spec.md
 - [ ] Read playbook (`docs/playbooks/implement-from-spec.md`)
 - [ ] Read target repo's CLAUDE.md
 - [ ] Read contract for scope context
-{Per-phase checklist items:}
+      {Per-phase checklist items:}
 - [ ] Phase 1: {title} — implement per spec
 - [ ] Phase 2: {title} — implement per spec
 - [ ] Run full validation suite

@@ -1,7 +1,7 @@
 ---
 name: from-ideation
 description: Execute an ideation contract through the case pipeline. Reads a contract folder, runs each spec phase through the implementer, then verifier → reviewer → closer for a single PR covering the entire contract.
-argument-hint: "<ideation-folder-path>"
+argument-hint: '<ideation-folder-path>'
 ---
 
 # Execute Ideation Contract
@@ -15,9 +15,11 @@ Run an ideation contract's specs through the case pipeline. All phases execute o
 Parse the argument as a path to an ideation folder containing `contract.md` and one or more spec files.
 
 **If no argument**: Search for ideation folders:
+
 ```bash
 ls ./docs/ideation/*/contract.md 2>/dev/null
 ```
+
 If multiple found, use `AskUserQuestion` to select one. If none found, report error.
 
 ## Pipeline Overview
@@ -39,6 +41,7 @@ One branch. One PR. Phases commit sequentially. Verification and review cover th
    - **Execution Plan** → phase ordering (informational — used to understand dependencies but execution is always sequential)
 
 3. Discover spec files in the folder:
+
    ```
    {folder}/spec.md                    # single-phase project (no phase number)
    {folder}/spec-phase-*.md            # multi-phase project
@@ -54,6 +57,7 @@ One branch. One PR. Phases commit sequentially. Verification and review cover th
 1. Determine **project name** from the ideation folder path (last directory segment, e.g., `bookmarks` from `docs/ideation/bookmarks/`)
 
 2. Determine **target repo** from the current working directory:
+
    ```bash
    basename $(git remote get-url origin) .git
    ```
@@ -67,6 +71,7 @@ One branch. One PR. Phases commit sequentially. Verification and review cover th
    - Generate per-phase checklist items
 
 5. Create companion `.task.json` in `/Users/nicknisi/Developer/case/tasks/active/`:
+
    ```json
    {
      "id": "{repo}-{n}-{project-name}",
@@ -97,18 +102,22 @@ One branch. One PR. Phases commit sequentially. Verification and review cover th
 ## Step 2: Branch & Baseline
 
 1. Create branch:
+
    ```bash
    git checkout -b feat/{project-name}
    ```
 
 2. Run baseline:
+
    ```bash
    bash /Users/nicknisi/Developer/case/scripts/bootstrap.sh {repo-name}
    ```
+
    - **FAIL**: Report to user via `AskUserQuestion`. Do not proceed.
    - **PASS**: Continue
 
 3. Update task JSON:
+
    ```bash
    bash /Users/nicknisi/Developer/case/scripts/task-status.sh {task.json} agent orchestrator status completed
    bash /Users/nicknisi/Developer/case/scripts/task-status.sh {task.json} agent orchestrator completed now
@@ -117,6 +126,7 @@ One branch. One PR. Phases commit sequentially. Verification and review cover th
 4. Append to task progress log:
    ```markdown
    ### Orchestrator — {timestamp}
+
    - Created task from ideation contract: {contract-path}
    - Phases: {count} ({list of phase titles})
    - Baseline smoke test: PASS
@@ -126,6 +136,7 @@ One branch. One PR. Phases commit sequentially. Verification and review cover th
 ## Step 3: Execute Phases
 
 Update task status:
+
 ```bash
 bash /Users/nicknisi/Developer/case/scripts/task-status.sh {task.json} status implementing
 bash /Users/nicknisi/Developer/case/scripts/task-status.sh {task.json} agent implementer status running
@@ -187,13 +198,16 @@ bash /Users/nicknisi/Developer/case/scripts/task-status.sh {task.json} agent imp
 After each phase's implementer completes successfully:
 
 1. Verify the commit exists:
+
    ```bash
    git log --oneline -1
    ```
 
 2. Append to progress log:
+
    ```markdown
    #### Phase {N} — {timestamp}
+
    - Spec: {spec-file}
    - Commit: {hash}
    - Summary: {from AGENT_RESULT}
@@ -202,6 +216,7 @@ After each phase's implementer completes successfully:
 3. Continue to next phase
 
 After all phases complete, update implementer status:
+
 ```bash
 bash /Users/nicknisi/Developer/case/scripts/task-status.sh {task.json} agent implementer status completed
 bash /Users/nicknisi/Developer/case/scripts/task-status.sh {task.json} agent implementer completed now
@@ -340,6 +355,7 @@ Use these to verify work beyond unit tests.
 ### Playwright (primary for front-end)
 
 Use the `playwright-cli` skill for browser automation:
+
 ```bash
 playwright-cli open                          # open browser
 playwright-cli video-start                   # start recording
@@ -357,6 +373,7 @@ Credentials for testing sign-in flows: `~/.config/case/credentials`. **NEVER com
 ### PR Verification Artifacts
 
 Upload screenshots/video for PR descriptions:
+
 ```bash
 VIDEO=$(/Users/nicknisi/Developer/case/scripts/upload-screenshot.sh /tmp/verification.webm)
 SCREENSHOT=$(/Users/nicknisi/Developer/case/scripts/upload-screenshot.sh /tmp/after.png)
@@ -367,6 +384,7 @@ The verifier agent handles capture. The closer agent uses the uploaded markdown 
 ## Step 6: Complete
 
 Report to user:
+
 - PR URL from closer's `AGENT_RESULT`
 - Summary of all phases implemented
 - What was tested (from verifier)
@@ -391,6 +409,7 @@ Report to user:
 ## Step 8: Failure Routing
 
 Every failure branch (Steps 2-5) routes to Step 7 (Retrospective) with:
+
 - Pipeline outcome: "failed"
 - Which agent failed
 - The failed agent's AGENT_RESULT (or error message)
@@ -423,6 +442,7 @@ This task was created by /case:from-ideation. Resume with:
 ## Rules
 
 Same rules as the main `/case` skill:
+
 - **Always use `AskUserQuestion`** when asking questions
 - **Always work in feature branches** — never commit to main
 - **Always use conventional commits** — `type(scope): description`
@@ -431,9 +451,9 @@ Same rules as the main `/case` skill:
 
 ## When to Use This vs `/ideation:execute-spec`
 
-| Use... | When... |
-|---|---|
-| `/case:from-ideation` | Working on a WorkOS OSS repo managed by case. Gets evidence-gated pipeline (verifier, reviewer, closer), PR creation, retrospective, per-repo learnings. |
+| Use...                   | When...                                                                                                                                                               |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/case:from-ideation`    | Working on a WorkOS OSS repo managed by case. Gets evidence-gated pipeline (verifier, reviewer, closer), PR creation, retrospective, per-repo learnings.              |
 | `/ideation:execute-spec` | Working on any repo outside case's manifest. Gets Scout codebase exploration, per-component feedback loops, Reviewer agent, but no PR automation or evidence markers. |
 
 Both consume the same ideation spec format. The difference is the execution pipeline around it.
@@ -441,5 +461,6 @@ Both consume the same ideation spec format. The difference is the execution pipe
 ## Always Load
 
 Read these first:
+
 - `../../AGENTS.md` — project landscape and navigation
 - `../../docs/golden-principles.md` — invariants across all repos

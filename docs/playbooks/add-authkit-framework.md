@@ -118,6 +118,7 @@ Create `src/server/middleware.ts`.
 Export `authkitMiddleware(options?)` that returns the framework's middleware type.
 
 Inside the middleware:
+
 1. Call `authService.withAuth(request)` to validate/refresh the session.
 2. Pass the `AuthResult` downstream via the framework's context system.
 3. Apply any response headers returned by `withAuth` (for token refresh Set-Cookie).
@@ -130,12 +131,12 @@ Create `src/server/server-functions.ts`.
 
 Export these functions (all delegate to `authService`):
 
-| Function | Delegates to |
-|----------|-------------|
-| `getAuth()` | `authService.withAuth(request)` |
-| `getSignInUrl()` | `authService.getSignInUrl()` |
-| `getSignUpUrl()` | `authService.getSignUpUrl()` |
-| `signOut()` | `authService.signOut(sessionId)` |
+| Function                 | Delegates to                       |
+| ------------------------ | ---------------------------------- |
+| `getAuth()`              | `authService.withAuth(request)`    |
+| `getSignInUrl()`         | `authService.getSignInUrl()`       |
+| `getSignUpUrl()`         | `authService.getSignUpUrl()`       |
+| `signOut()`              | `authService.signOut(sessionId)`   |
 | `switchToOrganization()` | `authService.switchOrganization()` |
 
 Create `src/server/server.ts` for the OAuth callback handler:
@@ -153,6 +154,7 @@ export async function handleCallbackRoute(request, response) {
 ### AuthKitProvider (`src/client/AuthKitProvider.tsx`)
 
 React context component that:
+
 1. Accepts `initialAuth` prop from the server (loader/SSR data).
 2. Provides auth state via React context.
 3. Monitors `document.visibilitychange` to refresh auth when tab regains focus.
@@ -188,6 +190,7 @@ export default defineConfig({
 Test files co-located with source (`.spec.ts` / `.spec.tsx`).
 
 Must test:
+
 - Storage adapter: cookie extraction, header application
 - Middleware: auth result propagation, token refresh flow
 - Server functions: sign-in URL generation, sign-out, org switching
@@ -200,6 +203,7 @@ Mock `@workos/authkit-session` internals (AuthService, AuthKitCore).
 ## Step 8: Add AGENTS.md
 
 Create `AGENTS.md` at repo root. Include:
+
 - Setup: `pnpm install`
 - Build: `pnpm build`
 - Test: `pnpm test`

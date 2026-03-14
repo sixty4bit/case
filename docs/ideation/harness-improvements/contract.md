@@ -90,6 +90,7 @@ Phases 1, 2, and 4 are independent. Phase 3 is blocked by Phase 1 (needs structu
    Start one Claude Code session, enter delegate mode (Shift+Tab), paste the agent team prompt below.
 
 2. **Phase 3** — Reviewer Agent _(blocked by Phase 1)_
+
    ```
    /execute-spec docs/ideation/harness-improvements/spec-phase-3.md
    ```

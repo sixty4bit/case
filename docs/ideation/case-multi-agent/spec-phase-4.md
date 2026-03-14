@@ -13,9 +13,9 @@ The validation plan tests against known failure cases: issue 53 (authkit-tanstac
 
 ### Modified Files
 
-| File Path | Changes |
-|-----------|---------|
-| `.claude-plugin/plugin.json` | Bump version from 0.7.0 to 0.8.0 |
+| File Path                         | Changes                          |
+| --------------------------------- | -------------------------------- |
+| `.claude-plugin/plugin.json`      | Bump version from 0.7.0 to 0.8.0 |
 | `.claude-plugin/marketplace.json` | Bump version from 0.7.0 to 0.8.0 |
 
 ## Implementation Details

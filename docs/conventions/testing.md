@@ -4,13 +4,13 @@
 
 All repos use **vitest**. No repo uses jest.
 
-| Repo | Config | Environment | Notes |
-|------|--------|-------------|-------|
-| cli | `vitest.config.ts` | node | `src/**/*.spec.ts`, `tests/evals/**/*.spec.ts` |
-| authkit-nextjs | `vitest.config.ts` | node + jsdom (two projects) | `**/*.spec.ts`, `**/*.spec.tsx` |
-| authkit-session | `vitest.config.ts` | node | `src/**/*.spec.ts`, `tests/**/*.spec.ts` |
-| authkit-tanstack-start | `vitest.config.ts` | node + happy-dom (two projects) | server + client splits |
-| skills | `vitest.config.ts` | node | `scripts/tests/**/*.spec.ts` |
+| Repo                   | Config             | Environment                     | Notes                                          |
+| ---------------------- | ------------------ | ------------------------------- | ---------------------------------------------- |
+| cli                    | `vitest.config.ts` | node                            | `src/**/*.spec.ts`, `tests/evals/**/*.spec.ts` |
+| authkit-nextjs         | `vitest.config.ts` | node + jsdom (two projects)     | `**/*.spec.ts`, `**/*.spec.tsx`                |
+| authkit-session        | `vitest.config.ts` | node                            | `src/**/*.spec.ts`, `tests/**/*.spec.ts`       |
+| authkit-tanstack-start | `vitest.config.ts` | node + happy-dom (two projects) | server + client splits                         |
+| skills                 | `vitest.config.ts` | node                            | `scripts/tests/**/*.spec.ts`                   |
 
 All repos use `globals: true` (no explicit vitest imports in test files).
 
@@ -31,19 +31,20 @@ No repo uses `.test.ts` naming. Use `.spec.ts` consistently.
 
 Coverage is tracked via vitest's `v8` provider.
 
-| Repo | Threshold | Enforced? |
-|------|-----------|-----------|
-| authkit-nextjs | 80% (branches, functions, lines, statements) | Yes, in vitest config |
-| authkit-session | 80% (global: branches, functions, lines, statements) | Yes, in vitest config |
-| authkit-tanstack-start | No threshold configured | No |
-| cli | No threshold configured | No |
-| skills | No threshold configured | No |
+| Repo                   | Threshold                                            | Enforced?             |
+| ---------------------- | ---------------------------------------------------- | --------------------- |
+| authkit-nextjs         | 80% (branches, functions, lines, statements)         | Yes, in vitest config |
+| authkit-session        | 80% (global: branches, functions, lines, statements) | Yes, in vitest config |
+| authkit-tanstack-start | No threshold configured                              | No                    |
+| cli                    | No threshold configured                              | No                    |
+| skills                 | No threshold configured                              | No                    |
 
-Target: **80% coverage** for library packages (authkit-*). CLI and skills have no enforced threshold.
+Target: **80% coverage** for library packages (authkit-\*). CLI and skills have no enforced threshold.
 
 ## What to Test
 
 ### Must Test
+
 - Public API surface (all exported functions)
 - Error paths and edge cases
 - JSON mode output (CLI commands)
@@ -79,5 +80,5 @@ pnpm test:coverage  # authkit-session
 projects: [
   { test: { name: 'server', environment: 'node', include: ['src/server/**/*.spec.*'] } },
   { test: { name: 'client', environment: 'happy-dom', include: ['src/client/**/*.spec.*'] } },
-]
+];
 ```

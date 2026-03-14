@@ -4,13 +4,13 @@ Step-by-step guides for recurring operations across WorkOS OSS repos. Each playb
 
 ## Index
 
-| Playbook | Use When | Task Template |
-|----------|----------|---------------|
-| [Add CLI Command](add-cli-command.md) | Adding a new resource command to the WorkOS CLI | `tasks/templates/cli-command.md` |
+| Playbook                                          | Use When                                           | Task Template                          |
+| ------------------------------------------------- | -------------------------------------------------- | -------------------------------------- |
+| [Add CLI Command](add-cli-command.md)             | Adding a new resource command to the WorkOS CLI    | `tasks/templates/cli-command.md`       |
 | [Add AuthKit Framework](add-authkit-framework.md) | Creating a new AuthKit integration for a framework | `tasks/templates/authkit-framework.md` |
-| [Add a Feature](add-feature.md) | Adding a new feature to any target repo | — |
-| [Fix a Bug](fix-bug.md) | Triaging and fixing a bug in any target repo | `tasks/templates/bug-fix.md` |
-| [Cross-Repo Update](cross-repo-update.md) | Coordinated changes across multiple repos | `tasks/templates/cross-repo-update.md` |
+| [Add a Feature](add-feature.md)                   | Adding a new feature to any target repo            | —                                      |
+| [Fix a Bug](fix-bug.md)                           | Triaging and fixing a bug in any target repo       | `tasks/templates/bug-fix.md`           |
+| [Cross-Repo Update](cross-repo-update.md)         | Coordinated changes across multiple repos          | `tasks/templates/cross-repo-update.md` |
 
 ## How Playbooks Work
 

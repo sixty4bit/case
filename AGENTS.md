@@ -6,6 +6,7 @@ Humans steer. Agents execute. When agents struggle, fix the harness.
 ## First Step
 
 Run the session-start script to gather context before doing anything else:
+
 ```bash
 SESSION=$(bash /Users/nicknisi/Developer/case/scripts/session-start.sh <target-repo-path> --task <task.json>)
 echo "$SESSION"
@@ -13,27 +14,27 @@ echo "$SESSION"
 
 ## Projects
 
-| Repo | Path | Purpose | Stack |
-| --- | --- | --- | --- |
-| cli | `../cli/main` | WorkOS CLI — AuthKit installers, resource management | TS/pnpm |
-| skills | `../skills` | Claude Code plugin — WorkOS integration skills | TS/pnpm |
-| authkit-session | `../authkit-session` | Framework-agnostic session management | TS/pnpm |
-| authkit-tanstack-start | `../authkit-tanstack-start` | AuthKit TanStack Start SDK | TS/pnpm |
-| authkit-nextjs | `../authkit-nextjs` | AuthKit Next.js SDK | TS/pnpm |
+| Repo                   | Path                        | Purpose                                              | Stack   |
+| ---------------------- | --------------------------- | ---------------------------------------------------- | ------- |
+| cli                    | `../cli/main`               | WorkOS CLI — AuthKit installers, resource management | TS/pnpm |
+| skills                 | `../skills`                 | Claude Code plugin — WorkOS integration skills       | TS/pnpm |
+| authkit-session        | `../authkit-session`        | Framework-agnostic session management                | TS/pnpm |
+| authkit-tanstack-start | `../authkit-tanstack-start` | AuthKit TanStack Start SDK                           | TS/pnpm |
+| authkit-nextjs         | `../authkit-nextjs`         | AuthKit Next.js SDK                                  | TS/pnpm |
 
 Full metadata (commands, remotes, language): `projects.json`
 
 ## Navigation
 
-| Topic | Location |
-| --- | --- |
-| Architecture patterns | `docs/architecture/` |
-| Shared conventions | `docs/conventions/` |
-| Golden principles | `docs/golden-principles.md` |
-| Playbooks | `docs/playbooks/` |
-| Agent roles | `agents/` |
-| Entropy management | `docs/conventions/entropy-management.md` |
-| Repo learnings | `docs/learnings/` |
+| Topic                 | Location                                 |
+| --------------------- | ---------------------------------------- |
+| Architecture patterns | `docs/architecture/`                     |
+| Shared conventions    | `docs/conventions/`                      |
+| Golden principles     | `docs/golden-principles.md`              |
+| Playbooks             | `docs/playbooks/`                        |
+| Agent roles           | `agents/`                                |
+| Entropy management    | `docs/conventions/entropy-management.md` |
+| Repo learnings        | `docs/learnings/`                        |
 
 ## Task Dispatch
 

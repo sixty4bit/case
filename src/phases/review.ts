@@ -28,7 +28,15 @@ export async function runReviewPhase(
       result: {
         status: 'completed',
         summary: '[dry-run] review phase skipped',
-        artifacts: { commit: null, filesChanged: [], testsPassed: null, screenshotUrls: [], evidenceMarkers: [], prUrl: null, prNumber: null },
+        artifacts: {
+          commit: null,
+          filesChanged: [],
+          testsPassed: null,
+          screenshotUrls: [],
+          evidenceMarkers: [],
+          prUrl: null,
+          prNumber: null,
+        },
         error: null,
       },
       nextPhase: 'close',
@@ -41,7 +49,11 @@ export async function runReviewPhase(
 
   const { result } = await spawnAgent({ prompt, cwd: config.repoPath });
 
-  await store.setAgentPhase('reviewer', 'status', result.status === 'blocked' ? 'completed' : result.status === 'completed' ? 'completed' : 'failed');
+  await store.setAgentPhase(
+    'reviewer',
+    'status',
+    result.status === 'blocked' ? 'completed' : result.status === 'completed' ? 'completed' : 'failed',
+  );
   await store.setAgentPhase('reviewer', 'completed', 'now');
   previousResults.set('reviewer', result);
 

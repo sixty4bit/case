@@ -15,10 +15,7 @@ export interface RepoContext {
  * Gather repo context deterministically. Runs session-start.sh and reads
  * learnings in parallel for speed. Only fetches what the role needs.
  */
-export async function prefetchRepoContext(
-  config: PipelineConfig,
-  role: AgentName,
-): Promise<RepoContext> {
+export async function prefetchRepoContext(config: PipelineConfig, role: AgentName): Promise<RepoContext> {
   const sessionStartScript = resolve(config.caseRoot, 'scripts/session-start.sh');
   const learningsPath = resolve(config.caseRoot, `docs/learnings/${config.repoName}.md`);
   const principlesPath = resolve(config.caseRoot, 'docs/golden-principles.md');

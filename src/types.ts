@@ -1,19 +1,7 @@
 /** Status lifecycle — mirrors task-status.sh TRANSITIONS map */
-export type TaskStatus =
-  | 'active'
-  | 'implementing'
-  | 'verifying'
-  | 'reviewing'
-  | 'closing'
-  | 'pr-opened'
-  | 'merged';
+export type TaskStatus = 'active' | 'implementing' | 'verifying' | 'reviewing' | 'closing' | 'pr-opened' | 'merged';
 
-export type AgentName =
-  | 'orchestrator'
-  | 'implementer'
-  | 'verifier'
-  | 'reviewer'
-  | 'closer';
+export type AgentName = 'orchestrator' | 'implementer' | 'verifier' | 'reviewer' | 'closer';
 
 export interface AgentPhase {
   started: string | null;
@@ -74,14 +62,7 @@ export interface ReviewFindings {
 
 export type PipelineMode = 'attended' | 'unattended';
 
-export type PipelinePhase =
-  | 'implement'
-  | 'verify'
-  | 'review'
-  | 'close'
-  | 'retrospective'
-  | 'complete'
-  | 'abort';
+export type PipelinePhase = 'implement' | 'verify' | 'review' | 'close' | 'retrospective' | 'complete' | 'abort';
 
 export interface PipelineConfig {
   mode: PipelineMode;
@@ -130,4 +111,71 @@ export interface SpawnAgentResult {
   raw: string;
   result: AgentResult;
   durationMs: number;
+}
+
+// --- Wave 5: Metrics ---
+
+export interface PhaseMetrics {
+  phase: PipelinePhase;
+  agent: AgentName | 'retrospective';
+  startedAt: string;
+  completedAt: string;
+  durationMs: number;
+  status: 'completed' | 'failed' | 'skipped';
+  retried: boolean;
+}
+
+export interface RunMetrics {
+  runId: string;
+  startedAt: string;
+  completedAt: string;
+  totalDurationMs: number;
+  outcome: 'completed' | 'failed';
+  failedAgent?: AgentName;
+  phases: PhaseMetrics[];
+  ciFirstPush: boolean | null;
+  reviewFindings: ReviewFindings | null;
+  promptVersions: Record<string, string>;
+}
+
+// --- Wave 5: Entry points ---
+
+export type TriggerSource =
+  | { type: 'cli'; user: string }
+  | { type: 'webhook'; event: string; deliveryId: string }
+  | { type: 'scanner'; scanner: string; runId: string }
+  | { type: 'manual'; description: string };
+
+export interface TaskCreateRequest {
+  repo: string;
+  title: string;
+  description: string;
+  issueType?: 'github' | 'linear' | 'freeform';
+  issue?: string;
+  mode?: PipelineMode;
+  trigger: TriggerSource;
+  autoStart?: boolean;
+  checkCommand?: string;
+  checkBaseline?: number;
+  checkTarget?: number;
+}
+
+// --- Wave 5: Scanners ---
+
+export interface ScannerConfig {
+  enabled: boolean;
+  intervalMs: number;
+  repos: string[];
+  autoStart: boolean;
+}
+
+export interface ServerConfig {
+  port: number;
+  host: string;
+  webhookSecret?: string;
+  scanners: {
+    ci: ScannerConfig;
+    staleDocs: ScannerConfig;
+    deps: ScannerConfig;
+  };
 }

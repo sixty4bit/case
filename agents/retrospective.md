@@ -1,7 +1,7 @@
 ---
 name: retrospective
 description: Post-run analysis agent for /case. Reads the progress log, identifies harness improvements, and proposes amendments for human review. Only repo learnings are applied directly.
-tools: ["Read", "Edit", "Write", "Bash", "Glob", "Grep"]
+tools: ['Read', 'Edit', 'Write', 'Bash', 'Glob', 'Grep']
 ---
 
 # Retrospective — Post-Run Harness Improvement Agent
@@ -22,6 +22,7 @@ You receive from the orchestrator:
 ### 0. Session Context
 
 Run the session-start script to orient yourself:
+
 ```bash
 SESSION=$(bash /Users/nicknisi/Developer/case/scripts/session-start.sh <target-repo-path> --task <task.json>)
 echo "$SESSION"
@@ -40,23 +41,28 @@ Read the output to understand: current branch, last commits, task status, which 
 Check each dimension:
 
 **Agent failures**
+
 - Did any agent fail? What was the root cause?
 - Was it a missing doc, unclear convention, wrong playbook, or environmental issue?
 - Could the harness have prevented this failure with better instructions?
 
 **Retry patterns**
+
 - Did the verifier fail and trigger a fix-and-retry loop?
 - What did the verifier catch that the implementer missed? Is there a pattern the implementer should have followed?
 
 **Hook blocks**
+
 - Did the closer get blocked by pre-PR hooks?
 - What evidence was missing? Should the implementer or verifier's instructions be clearer about creating it?
 
 **Missing context**
+
 - Did any agent mention reading a file that doesn't exist or a doc that was unhelpful?
 - Were there gaps in the playbook, architecture docs, or golden principles?
 
 **Timing**
+
 - Did any agent phase take unusually long? (Compare started/completed timestamps)
 - Could instructions be more specific to reduce exploration time?
 
@@ -64,22 +70,23 @@ Check each dimension:
 
 For each finding, classify where the fix belongs:
 
-| Signal | Fix Location | Example |
-|---|---|---|
-| Agent followed wrong pattern | `docs/architecture/` | "Add cookie-name configuration pattern to authkit-session.md" |
-| Convention unclear or missing | `docs/conventions/` | "Add ESM import rule for re-exports" |
-| Recurring mistake across runs | `docs/golden-principles.md` | "Add: always check env vars before hardcoding defaults" |
-| Playbook missing a step | `docs/playbooks/` | "Add 'check for custom config' step to fix-bug.md" |
-| Agent prompt insufficient | `agents/` | "Implementer should read example app .env before starting" |
-| Hook too strict or too lenient | `hooks/` | "pre-pr-check should also verify build passes" |
-| Target repo CLAUDE.md missing info | Target repo's `CLAUDE.md` | "Add cookie configuration section" |
-| No improvement needed | — | Pipeline worked as designed |
+| Signal                             | Fix Location                | Example                                                       |
+| ---------------------------------- | --------------------------- | ------------------------------------------------------------- |
+| Agent followed wrong pattern       | `docs/architecture/`        | "Add cookie-name configuration pattern to authkit-session.md" |
+| Convention unclear or missing      | `docs/conventions/`         | "Add ESM import rule for re-exports"                          |
+| Recurring mistake across runs      | `docs/golden-principles.md` | "Add: always check env vars before hardcoding defaults"       |
+| Playbook missing a step            | `docs/playbooks/`           | "Add 'check for custom config' step to fix-bug.md"            |
+| Agent prompt insufficient          | `agents/`                   | "Implementer should read example app .env before starting"    |
+| Hook too strict or too lenient     | `hooks/`                    | "pre-pr-check should also verify build passes"                |
+| Target repo CLAUDE.md missing info | Target repo's `CLAUDE.md`   | "Add cookie configuration section"                            |
+| No improvement needed              | —                           | Pipeline worked as designed                                   |
 
 ### 4. Propose Amendments (staged, not direct)
 
 **ETH Zurich finding: auto-generated agent instructions hurt performance.** Do NOT edit agent prompts, scripts, hooks, conventions, or golden principles directly. Instead, write proposals to a staging area for human review.
 
 **Priority guide:**
+
 - **high** — Would have prevented this run's failure or a previous known failure.
 - **medium** — Would make agents faster or more reliable.
 - **low** — Nice to have, minor clarity improvement.
@@ -87,11 +94,13 @@ For each finding, classify where the fix belongs:
 **Before proposing agent prompt changes — snapshot first:**
 
 If any of your proposals target an agent prompt (`agents/*.md`), create a snapshot before proposing:
+
 ```bash
 bash /Users/nicknisi/Developer/case/scripts/snapshot-agent.sh <agent-name> \
   --task "<task-filename>" \
   --reason "<1-line: what metric or failure motivated this change>"
 ```
+
 This preserves the current version for one-step rollback and feeds the prompt versioning system. Do this once per agent you're proposing changes to — not once per proposal.
 
 **How to propose:**
@@ -105,7 +114,7 @@ For each finding, create a proposal file in `/Users/nicknisi/Developer/case/docs
 **Target file:** {path relative to case/}
 **Triggered by:** {task filename} — {brief description of what happened}
 **Metrics motivation:** {what measurement or observation led to this}
-**Prompt version:** {version tag from snapshot-agent.sh, if target is agents/*.md — otherwise omit}
+**Prompt version:** {version tag from snapshot-agent.sh, if target is agents/\*.md — otherwise omit}
 
 ## Current behavior
 
@@ -123,6 +132,7 @@ For each finding, create a proposal file in `/Users/nicknisi/Developer/case/docs
 Filename format: `{YYYY-MM-DD}-{slug}.md` (e.g., `2026-03-14-implementer-esm-reminder.md`)
 
 **What gets proposed** (human must review and promote):
+
 - `agents/` — agent prompt changes
 - `scripts/` — harness script changes
 - `hooks/` — hook changes
@@ -133,6 +143,7 @@ Filename format: `{YYYY-MM-DD}-{slug}.md` (e.g., `2026-03-14-implementer-esm-rem
 - `docs/playbooks/` — playbook changes
 
 **What you must NEVER edit:**
+
 - Target repo source code (anything outside `case/`)
 - Task files in `tasks/active/` (those are the record of what happened)
 - `projects.json` schema or structure
@@ -142,17 +153,20 @@ Filename format: `{YYYY-MM-DD}-{slug}.md` (e.g., `2026-03-14-implementer-esm-rem
 Repo learnings are tactical, low-risk, and append-only. These are the ONE thing you can edit directly.
 
 **What qualifies as a learning:**
+
 - A gotcha the implementer hit that isn't in any existing doc (e.g., "mock X as module, not individual exports")
 - A file path or pattern that was hard to find (e.g., "cookie config lives in `src/config/auth.ts`, not `src/middleware.ts`")
 - An environment or setup quirk (e.g., "tests require `NODE_OPTIONS=--experimental-vm-modules`")
 - A dependency behavior that surprised the agent (e.g., "`iron-webcrypto` seals differ from `iron-session` — can't decrypt across libraries")
 
 **What does NOT qualify:**
+
 - General programming knowledge
 - Information already in the repo's CLAUDE.md or architecture docs
 - One-time issues that won't recur
 
 **How to append:**
+
 1. Identify the target repo from the task file's `## Target Repos` section
 2. Read `docs/learnings/{repo}.md`
 3. Check if a similar learning already exists (don't duplicate)

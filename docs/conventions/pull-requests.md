@@ -11,13 +11,13 @@
 
 Every PR must pass these checks (where the repo has them configured):
 
-| Check | cli | authkit-nextjs | authkit-session | authkit-tanstack-start | skills |
-|-------|-----|---------------|-----------------|----------------------|--------|
-| Tests | `pnpm test` | `pnpm test` | `pnpm test` | `vitest run` | `pnpm test` |
-| Types | `pnpm typecheck` | `pnpm typecheck` | `pnpm run typecheck` | `pnpm run typecheck` | -- |
-| Lint | `pnpm lint` (oxlint) | `pnpm run lint` (eslint) | -- | -- | `pnpm lint` (oxlint) |
-| Format | `pnpm format` (oxfmt) | `pnpm prettier` | `pnpm run prettier` | `pnpm run prettier` | `pnpm format` (oxfmt) |
-| Build | `pnpm build` | `pnpm run build` | `pnpm run build` | `pnpm build` | -- |
+| Check  | cli                   | authkit-nextjs           | authkit-session      | authkit-tanstack-start | skills                |
+| ------ | --------------------- | ------------------------ | -------------------- | ---------------------- | --------------------- |
+| Tests  | `pnpm test`           | `pnpm test`              | `pnpm test`          | `vitest run`           | `pnpm test`           |
+| Types  | `pnpm typecheck`      | `pnpm typecheck`         | `pnpm run typecheck` | `pnpm run typecheck`   | --                    |
+| Lint   | `pnpm lint` (oxlint)  | `pnpm run lint` (eslint) | --                   | --                     | `pnpm lint` (oxlint)  |
+| Format | `pnpm format` (oxfmt) | `pnpm prettier`          | `pnpm run prettier`  | `pnpm run prettier`    | `pnpm format` (oxfmt) |
+| Build  | `pnpm build`          | `pnpm run build`         | `pnpm run build`     | `pnpm build`           | --                    |
 
 Run these locally before pushing. Some repos have no CI workflows configured; local verification is the gate.
 

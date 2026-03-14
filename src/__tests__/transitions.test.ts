@@ -25,7 +25,9 @@ describe('determineEntryPhase', () => {
   it('implementing with implementer completed -> verify', () => {
     const task = makeTask({
       status: 'implementing',
-      agents: { implementer: { started: '2026-03-14T00:00:00Z', completed: '2026-03-14T00:01:00Z', status: 'completed' } },
+      agents: {
+        implementer: { started: '2026-03-14T00:00:00Z', completed: '2026-03-14T00:01:00Z', status: 'completed' },
+      },
     });
     expect(determineEntryPhase(task)).toBe('verify');
   });

@@ -21,8 +21,8 @@ This is a documentation-only phase — no code changes.
 
 ### Modified Files
 
-| File Path | Changes |
-|-----------|---------|
+| File Path   | Changes                                              |
+| ----------- | ---------------------------------------------------- |
 | `README.md` | Comprehensive update to reflect all new capabilities |
 
 ## Implementation Details
@@ -91,6 +91,7 @@ This is a documentation-only phase — no code changes.
     - Ensure the pipeline flow description matches the actual agent dispatch order
 
 **Implementation steps**:
+
 1. Read `README.md` thoroughly
 2. Read actual files referenced by README (agents/, hooks/, scripts/, docs/)
 3. Compare and identify all discrepancies
@@ -98,6 +99,7 @@ This is a documentation-only phase — no code changes.
 5. Re-read the updated README for coherence
 
 **Key decisions**:
+
 - Preserve the existing structure — don't reorganize, just update
 - Keep the same voice and detail level
 - Update mermaid diagrams to match reality

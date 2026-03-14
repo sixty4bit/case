@@ -8,7 +8,7 @@
 
 The `/case` skill runs as a single agent that handles issue parsing, implementation, testing, manual verification, evidence collection, PR creation, and task lifecycle management — all in one context window. By the time the agent finishes implementing a fix, the pre-PR checklist instructions have decayed or been compacted. This leads to two recurring failures:
 
-1. **Verification skipping**: The agent skips manual testing or games evidence markers (e.g., running `touch .case-tested` instead of piping test output). Hooks catch this at the gate, but the agent has already lost the context to recover gracefully. Root cause: the agent that *wrote* the code is asked to *objectively test* it — context pollution makes this unreliable.
+1. **Verification skipping**: The agent skips manual testing or games evidence markers (e.g., running `touch .case-tested` instead of piping test output). Hooks catch this at the gate, but the agent has already lost the context to recover gracefully. Root cause: the agent that _wrote_ the code is asked to _objectively test_ it — context pollution makes this unreliable.
 
 2. **Task lifecycle failure**: Task files are created in `tasks/active/` but rarely updated during work and inconsistently moved to `tasks/done/`. The post-PR cleanup hook handles the move, but if it fails silently or the PR is never created, task files become orphaned. The Markdown checkbox format is write-once in practice — agents create the file and never update it.
 
@@ -86,16 +86,19 @@ Phase 1: Task Infrastructure
 **Strategy**: Sequential — all phases form a linear chain.
 
 1. **Phase 1 — Task Infrastructure** _(foundation, blocks all others)_
+
    ```
    /ideation:execute-spec docs/ideation/case-multi-agent/spec-phase-1.md
    ```
 
 2. **Phase 2 — Agent Prompt Files** _(blocked by Phase 1)_
+
    ```
    /ideation:execute-spec docs/ideation/case-multi-agent/spec-phase-2.md
    ```
 
 3. **Phase 3 — Orchestrator SKILL.md Rewrite** _(blocked by Phase 2)_
+
    ```
    /ideation:execute-spec docs/ideation/case-multi-agent/spec-phase-3.md
    ```

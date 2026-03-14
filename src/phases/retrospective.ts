@@ -38,15 +38,17 @@ export async function runRetrospectivePhase(
     // Include failed agent's AGENT_RESULT if available
     ...(failedAgent && previousResults.has(failedAgent)
       ? [
-        `### ${failedAgent} AGENT_RESULT`,
-        '',
-        '```json',
-        JSON.stringify(previousResults.get(failedAgent), null, 2),
-        '```',
-        '',
-      ]
+          `### ${failedAgent} AGENT_RESULT`,
+          '',
+          '```json',
+          JSON.stringify(previousResults.get(failedAgent), null, 2),
+          '```',
+          '',
+        ]
       : []),
-  ].filter(Boolean).join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   // We reuse assemblePrompt with 'closer' role for minimal context,
   // then prepend the retrospective template manually since 'retrospective'

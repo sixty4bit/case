@@ -26,17 +26,18 @@ During active work sessions, use Claude Code's `/loop` to scan periodically:
 ```
 
 This runs every 30 minutes while your session is active. The scan:
+
 - Always exits 0 (won't break the loop)
 - Reports status as JSON (`clean` or `drift_detected`)
 - Lists specific failures for you to address
 
 ### Recommended intervals
 
-| Scenario | Interval | Command |
-| --- | --- | --- |
-| Active multi-repo work | 30m | `/loop 30m bash scripts/entropy-scan.sh` |
-| Focused single-repo work | 1h | `/loop 1h bash scripts/entropy-scan.sh --repo {name}` |
-| Background monitoring | 2h | `/loop 2h bash scripts/entropy-scan.sh` |
+| Scenario                 | Interval | Command                                               |
+| ------------------------ | -------- | ----------------------------------------------------- |
+| Active multi-repo work   | 30m      | `/loop 30m bash scripts/entropy-scan.sh`              |
+| Focused single-repo work | 1h       | `/loop 1h bash scripts/entropy-scan.sh --repo {name}` |
+| Background monitoring    | 2h       | `/loop 2h bash scripts/entropy-scan.sh`               |
 
 ### Limitations
 
@@ -60,6 +61,7 @@ See `docs/golden-principles.md` for the full list of invariants.
 ## Acting on Drift
 
 When drift is detected:
+
 1. Read the failures array in the JSON output
 2. Fix the lowest-effort issues first (commit format, missing fields)
 3. For structural issues (file sizes, missing tests), create a task in `tasks/active/`

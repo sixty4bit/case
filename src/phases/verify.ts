@@ -27,7 +27,15 @@ export async function runVerifyPhase(
       result: {
         status: 'completed',
         summary: '[dry-run] verify phase skipped',
-        artifacts: { commit: null, filesChanged: [], testsPassed: null, screenshotUrls: [], evidenceMarkers: [], prUrl: null, prNumber: null },
+        artifacts: {
+          commit: null,
+          filesChanged: [],
+          testsPassed: null,
+          screenshotUrls: [],
+          evidenceMarkers: [],
+          prUrl: null,
+          prNumber: null,
+        },
         error: null,
       },
       nextPhase: 'review',

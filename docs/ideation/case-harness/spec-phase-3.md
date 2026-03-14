@@ -8,7 +8,7 @@
 
 Build the knowledge base that sits at the heart of the harness: architecture docs, conventions, and golden principles. These are the documents that make agents effective across repos — they capture the cross-cutting knowledge no single repo contains.
 
-The approach is empirical, not theoretical: read the actual repos, extract the patterns that exist, document the canonical versions, and note deviations. Architecture docs describe how things *should* work (based on the best examples). Conventions docs describe shared rules. Golden principles are the invariants that must hold across all repos.
+The approach is empirical, not theoretical: read the actual repos, extract the patterns that exist, document the canonical versions, and note deviations. Architecture docs describe how things _should_ work (based on the best examples). Conventions docs describe shared rules. Golden principles are the invariants that must hold across all repos.
 
 Every doc should be concise and agent-oriented — scannable, actionable, with concrete file references. Progressive disclosure: agents start with AGENTS.md, drill into these docs only when needed.
 
@@ -24,19 +24,19 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 
 ### New Files
 
-| File Path | Purpose |
-| --- | --- |
-| `docs/architecture/cli.md` | Canonical patterns for the WorkOS CLI |
+| File Path                                | Purpose                                              |
+| ---------------------------------------- | ---------------------------------------------------- |
+| `docs/architecture/cli.md`               | Canonical patterns for the WorkOS CLI                |
 | `docs/architecture/authkit-framework.md` | Canonical pattern for AuthKit framework integrations |
-| `docs/architecture/authkit-session.md` | Canonical pattern for session management |
-| `docs/architecture/skills-plugin.md` | Canonical pattern for the skills plugin |
-| `docs/architecture/README.md` | Index of architecture docs |
-| `docs/conventions/commits.md` | Commit message conventions (shared) |
-| `docs/conventions/testing.md` | Testing standards per repo type |
-| `docs/conventions/pull-requests.md` | PR structure and review expectations |
-| `docs/conventions/code-style.md` | Shared code style rules (file size, naming, etc.) |
-| `docs/conventions/README.md` | Index of convention docs |
-| `docs/golden-principles.md` | Invariants enforced across all repos |
+| `docs/architecture/authkit-session.md`   | Canonical pattern for session management             |
+| `docs/architecture/skills-plugin.md`     | Canonical pattern for the skills plugin              |
+| `docs/architecture/README.md`            | Index of architecture docs                           |
+| `docs/conventions/commits.md`            | Commit message conventions (shared)                  |
+| `docs/conventions/testing.md`            | Testing standards per repo type                      |
+| `docs/conventions/pull-requests.md`      | PR structure and review expectations                 |
+| `docs/conventions/code-style.md`         | Shared code style rules (file size, naming, etc.)    |
+| `docs/conventions/README.md`             | Index of convention docs                             |
+| `docs/golden-principles.md`              | Invariants enforced across all repos                 |
 
 ## Implementation Details
 
@@ -47,6 +47,7 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 **Overview**: Documents the canonical structure of the CLI — adapter pattern, event emitter, command registration, output modes. This is what an agent reads before adding a new command or framework installer.
 
 **Key content**:
+
 - Adapter pattern (CLI, Dashboard, Headless) → InstallerEventEmitter
 - Command structure: src/commands/{resource}.ts + spec
 - Framework installer structure: src/{framework}/{framework}-installer-agent.ts
@@ -54,6 +55,7 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 - Registration in bin.ts, help-json.ts
 
 **Implementation steps**:
+
 1. Read ../cli/main deeply — src/ structure, key files, patterns
 2. Document the adapter/event-emitter architecture with a dependency diagram
 3. Document the "add a command" pattern step by step
@@ -67,6 +69,7 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 **Overview**: Documents the canonical pattern for building an AuthKit integration for any framework. An agent creating a new AuthKit framework integration should be able to follow this doc.
 
 **Key content**:
+
 - Common structure: middleware → session management → provider → hooks
 - How framework integrations consume authkit-session
 - Required exports: middleware config, auth helpers, provider component, hooks
@@ -74,6 +77,7 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 - Comparison: Next.js vs TanStack Start approaches
 
 **Implementation steps**:
+
 1. Read authkit-nextjs and authkit-tanstack-start in parallel
 2. Identify the shared pattern and framework-specific deviations
 3. Document the canonical pattern as a template
@@ -87,6 +91,7 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 **Overview**: Documents the session management layer that framework integrations build on.
 
 **Key content**:
+
 - Framework-agnostic design with pluggable storage adapters
 - Session lifecycle: create, refresh, revoke
 - Encryption approach (WebCrypto/iron-session)
@@ -94,6 +99,7 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 - Storage adapter interface
 
 **Implementation steps**:
+
 1. Read authkit-session src/ thoroughly
 2. Document the adapter interface and lifecycle
 3. Document how framework packages consume it
@@ -106,6 +112,7 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 **Overview**: Documents how the skills plugin is structured — useful for agents maintaining or extending skills.
 
 **Key content**:
+
 - Plugin structure: .claude-plugin/, marketplace.json, plugin.json
 - Skill types: hand-crafted AuthKit skills vs topic files vs router
 - "Fetch docs first" pattern
@@ -113,6 +120,7 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 - How to add a new topic file vs a new skill
 
 **Implementation steps**:
+
 1. Read skills repo structure
 2. Document plugin manifest structure
 3. Document skill authoring patterns
@@ -124,12 +132,14 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 **Overview**: Shared commit conventions across all repos.
 
 **Key content**:
+
 - Conventional Commits format (all repos use this)
 - release-please integration
 - Breaking change suffix (`feat!:`)
 - Scope conventions per repo
 
 **Implementation steps**:
+
 1. Check each repo's commit history to verify conventional commits usage
 2. Document the shared standard
 3. Note any per-repo variations
@@ -139,13 +149,15 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 **Overview**: Testing standards — what's expected per repo type.
 
 **Key content**:
+
 - All repos: tests must pass before PR
 - Coverage expectations (authkit-session: 80% threshold, others vary)
 - Test framework: vitest (authkit-session, skills), jest (authkit-nextjs)
-- Test file naming: *.spec.ts / *.test.ts conventions
+- Test file naming: _.spec.ts / _.test.ts conventions
 - What to test: public API surface, edge cases, error paths
 
 **Implementation steps**:
+
 1. Survey test setup across all 5 repos (test framework, config, coverage)
 2. Document the shared expectations
 3. Note per-repo deviations
@@ -155,6 +167,7 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 **Overview**: What a good PR looks like across WorkOS OSS repos.
 
 **Key content**:
+
 - Small, focused PRs (one concern per PR)
 - PR description template
 - Required checks before merge (tests, types, lint, build)
@@ -165,6 +178,7 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 **Overview**: Shared code style rules.
 
 **Key content**:
+
 - TypeScript strict mode (all repos)
 - Formatter: prettier (authkit-nextjs), oxfmt (skills), prettier (authkit-session)
 - Linter: eslint vs oxlint
@@ -172,6 +186,7 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 - Naming conventions
 
 **Implementation steps**:
+
 1. Survey formatter/linter config across all 5 repos
 2. Document shared rules vs per-repo tools
 3. Note inconsistencies that should converge
@@ -181,6 +196,7 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 **Overview**: The invariants that must hold across all repos. These are what `scripts/check.sh` (Phase 5) enforces.
 
 **Key content**:
+
 - Every repo must have: AGENTS.md, working test/lint/typecheck/build commands
 - Tests must pass on the default branch at all times
 - Conventional commits for all changes
@@ -190,6 +206,7 @@ Every doc should be concise and agent-oriented — scannable, actionable, with c
 - Boundary validation for external data (API responses, user input)
 
 **Implementation steps**:
+
 1. Survey all 5 repos for existing patterns and pain points
 2. Draft principles based on what's already true (document reality, then aspirations)
 3. Mark each principle as "enforced" (scripts/check.sh can verify) or "advisory" (human judgment)

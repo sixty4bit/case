@@ -8,10 +8,21 @@ import { runVerifyPhase } from './phases/verify.js';
 import { runReviewPhase } from './phases/review.js';
 import { runClosePhase } from './phases/close.js';
 import { runRetrospectivePhase } from './phases/retrospective.js';
+import { MetricsCollector } from './metrics/collector.js';
+import { writeRunMetrics } from './metrics/writer.js';
+import { getCurrentPromptVersions, findPriorRunId } from './versioning/prompt-tracker.js';
 import { runScript } from './util/run-script.js';
 import { createLogger } from './util/logger.js';
 
 const log = createLogger();
+
+const PHASE_AGENT_MAP: Record<string, AgentName | 'retrospective'> = {
+  implement: 'implementer',
+  verify: 'verifier',
+  review: 'reviewer',
+  close: 'closer',
+  retrospective: 'retrospective',
+};
 
 /**
  * Core pipeline loop — while/switch replacing SKILL.md Steps 4-9.
@@ -23,28 +34,34 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
   const store = new TaskStore(config.taskJsonPath, config.caseRoot);
   const notifier = createNotifier(config.mode);
   const previousResults = new Map<AgentName, AgentResult>();
+  const metrics = new MetricsCollector();
 
   const task = await store.read();
   let currentPhase: PipelinePhase = determineEntryPhase(task);
   let outcome: 'completed' | 'failed' = 'completed';
   let failedAgent: AgentName | undefined;
 
-  log.info('pipeline started', { phase: currentPhase, mode: config.mode, task: task.id });
+  // Load prompt versions for this run's metrics
+  const promptVersions = await getCurrentPromptVersions(config.caseRoot);
+  metrics.setPromptVersions(promptVersions);
+
+  log.info('pipeline started', { phase: currentPhase, mode: config.mode, task: task.id, runId: metrics.runId });
 
   while (currentPhase !== 'complete' && currentPhase !== 'abort') {
     log.phase(currentPhase, 'entering');
+    const phaseAgent = PHASE_AGENT_MAP[currentPhase];
+    if (phaseAgent) metrics.startPhase(currentPhase, phaseAgent);
 
     switch (currentPhase) {
       case 'implement': {
         const output = await runImplementPhase(config, store, previousResults);
         if (output.nextPhase === 'abort') {
+          metrics.endPhase('failed', config.maxRetries > 0);
           const choice = await handleFailure(notifier, config, 'implementer', output.result, [
             'Retry with guidance',
             'Abort',
           ]);
           if (choice === 'Retry with guidance') {
-            // Re-enter implement phase (the retry already happened inside the phase,
-            // this is a user-guided re-run)
             currentPhase = 'implement';
           } else {
             failedAgent = 'implementer';
@@ -52,6 +69,11 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
             currentPhase = 'retrospective';
           }
         } else {
+          metrics.endPhase('completed');
+          // Track CI first-push from implementer result
+          if (output.result.artifacts.testsPassed !== null) {
+            metrics.setCiFirstPush(output.result.artifacts.testsPassed);
+          }
           currentPhase = output.nextPhase;
         }
         break;
@@ -60,6 +82,7 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
       case 'verify': {
         const output = await runVerifyPhase(config, store, previousResults);
         if (output.nextPhase === 'abort') {
+          metrics.endPhase('failed');
           const choice = await handleFailure(notifier, config, 'verifier', output.result, [
             'Re-implement and re-verify',
             'Skip verification',
@@ -75,6 +98,7 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
             currentPhase = 'retrospective';
           }
         } else {
+          metrics.endPhase('completed');
           currentPhase = output.nextPhase;
         }
         break;
@@ -82,7 +106,12 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
 
       case 'review': {
         const output = await runReviewPhase(config, store, previousResults);
+        // Capture review findings in metrics
+        if (output.result.findings) {
+          metrics.setReviewFindings(output.result.findings);
+        }
         if (output.nextPhase === 'abort') {
+          metrics.endPhase('failed');
           const choice = await handleFailure(notifier, config, 'reviewer', output.result, [
             'Re-implement and re-review',
             'Override and continue',
@@ -98,6 +127,7 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
             currentPhase = 'retrospective';
           }
         } else {
+          metrics.endPhase('completed');
           currentPhase = output.nextPhase;
         }
         break;
@@ -106,10 +136,8 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
       case 'close': {
         const output = await runClosePhase(config, store, previousResults);
         if (output.nextPhase === 'abort') {
-          const choice = await handleFailure(notifier, config, 'closer', output.result, [
-            'Retry',
-            'Abort',
-          ]);
+          metrics.endPhase('failed');
+          const choice = await handleFailure(notifier, config, 'closer', output.result, ['Retry', 'Abort']);
           if (choice === 'Retry') {
             currentPhase = 'close';
           } else {
@@ -118,7 +146,7 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
             currentPhase = 'retrospective';
           }
         } else {
-          // Success — report PR URL
+          metrics.endPhase('completed');
           const prUrl = output.result.artifacts.prUrl;
           if (prUrl) {
             notifier.send(`PR created: ${prUrl}`);
@@ -129,20 +157,37 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
       }
 
       case 'retrospective': {
+        metrics.startPhase('retrospective', 'retrospective');
         await runRetrospectivePhase(config, store, previousResults, outcome, failedAgent);
+        metrics.endPhase('completed');
         currentPhase = outcome === 'completed' ? 'complete' : 'abort';
         break;
       }
     }
   }
 
-  // Log the run
+  // Finalize and write metrics
+  const runMetrics = metrics.finalize(outcome, failedAgent);
+  const priorRunId = await findPriorRunId(config.caseRoot, task.id);
+  await writeRunMetrics(config.caseRoot, task.id, config.repoName, runMetrics, {
+    priorRunId,
+    parentTaskId: task.contractPath,
+  });
+
+  // Also run legacy log-run.sh for backward compatibility
   const logRunScript = resolve(config.caseRoot, 'scripts/log-run.sh');
   const logArgs = [logRunScript, config.taskJsonPath, outcome];
   if (failedAgent) logArgs.push(failedAgent);
-  await runScript('bash', logArgs);
+  await runScript('bash', logArgs).catch(() => {
+    // Non-fatal — metrics already written above
+  });
 
-  log.info('pipeline finished', { outcome, failedAgent });
+  log.info('pipeline finished', {
+    outcome,
+    failedAgent,
+    runId: runMetrics.runId,
+    totalDurationMs: runMetrics.totalDurationMs,
+  });
 
   if (outcome === 'failed') {
     notifier.send(`Pipeline failed at ${failedAgent ?? 'unknown'} phase.`);

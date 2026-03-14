@@ -31,7 +31,7 @@ If the repo has a build step (`pnpm build`), run it to confirm the baseline is c
 
 ## Step 3: Reproduce the Bug
 
-> **`/case` pipeline note:** When running via the `/case` pipeline, bug reproduction is handled by the orchestrator (Step 3.5) *before* the implementer is spawned. The implementer receives the root cause analysis and reproduction evidence, so it can skip to writing a failing test and implementing the fix.
+> **`/case` pipeline note:** When running via the `/case` pipeline, bug reproduction is handled by the orchestrator (Step 3.5) _before_ the implementer is spawned. The implementer receives the root cause analysis and reproduction evidence, so it can skip to writing a failing test and implementing the fix.
 
 Write a failing test first if possible. This is the strongest form of reproduction.
 
@@ -44,13 +44,13 @@ If a test isn't feasible (e.g., environment-specific bug), document the reproduc
 
 ### Where to Look by Repo
 
-| Repo | Common bug locations |
-|------|---------------------|
-| `cli` | `src/commands/*.ts` (command logic), `src/lib/*.ts` (core), `src/utils/*.ts` (output/formatting) |
-| `authkit-session` | `src/core/AuthKitCore.ts` (JWT/refresh), `src/core/session/CookieSessionStorage.ts`, `src/service/AuthService.ts` |
-| `authkit-nextjs` | `src/middleware.ts`, `src/session.ts`, `src/auth.ts`, `src/authkit-callback-route.ts` |
+| Repo                     | Common bug locations                                                                                                    |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `cli`                    | `src/commands/*.ts` (command logic), `src/lib/*.ts` (core), `src/utils/*.ts` (output/formatting)                        |
+| `authkit-session`        | `src/core/AuthKitCore.ts` (JWT/refresh), `src/core/session/CookieSessionStorage.ts`, `src/service/AuthService.ts`       |
+| `authkit-nextjs`         | `src/middleware.ts`, `src/session.ts`, `src/auth.ts`, `src/authkit-callback-route.ts`                                   |
 | `authkit-tanstack-start` | `src/server/middleware.ts`, `src/server/storage.ts`, `src/server/server-functions.ts`, `src/client/AuthKitProvider.tsx` |
-| `skills` | `plugins/workos/skills/*/SKILL.md`, `scripts/eval/scorer.ts` |
+| `skills`                 | `plugins/workos/skills/*/SKILL.md`, `scripts/eval/scorer.ts`                                                            |
 
 ## Step 4: Identify Root Cause
 
@@ -102,11 +102,11 @@ Evidence: `.case-reviewed` marker (created by `scripts/mark-reviewed.sh` only if
 
 Some bugs span repos. Common patterns:
 
-| Pattern | Example | Action |
-|---------|---------|--------|
-| Session logic bug | Token refresh fails in all frameworks | Fix in `authkit-session`, verify in framework repos |
-| SDK type mismatch | CLI breaks after `@workos-inc/node` update | Fix in `cli`, check if other repos import the same type |
-| Skill produces wrong output | Agent generates bad code from skill | Fix the SKILL.md or topic file, re-run eval |
+| Pattern                     | Example                                    | Action                                                  |
+| --------------------------- | ------------------------------------------ | ------------------------------------------------------- |
+| Session logic bug           | Token refresh fails in all frameworks      | Fix in `authkit-session`, verify in framework repos     |
+| SDK type mismatch           | CLI breaks after `@workos-inc/node` update | Fix in `cli`, check if other repos import the same type |
+| Skill produces wrong output | Agent generates bad code from skill        | Fix the SKILL.md or topic file, re-run eval             |
 
 If the bug originates in a shared dependency (`authkit-session`), you may need to open PRs in multiple repos. Use the [cross-repo update playbook](cross-repo-update.md) for coordination.
 

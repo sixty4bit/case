@@ -18,6 +18,7 @@ Create `src/commands/{resource}.ts`.
 Follow the pattern in `src/commands/organization.ts`:
 
 1. Import utilities:
+
    ```typescript
    import { createWorkOSClient } from '../lib/workos-client.js';
    import { outputSuccess, outputJson, isJsonMode } from '../utils/output.js';
@@ -25,6 +26,7 @@ Follow the pattern in `src/commands/organization.ts`:
    ```
 
 2. Create an error handler at module scope:
+
    ```typescript
    const handleApiError = createApiErrorHandler('ResourceName');
    ```
@@ -38,6 +40,7 @@ Follow the pattern in `src/commands/organization.ts`:
    - For `list`: checks `isJsonMode()` and branches -- JSON mode outputs `{ data, listMetadata }`, human mode uses `formatTable()` from `../utils/table.js`
 
 4. For list commands, support pagination options: `limit`, `before`, `after`, `order`. Export an options interface:
+
    ```typescript
    export interface ResourceListOptions {
      limit?: number;
@@ -56,6 +59,7 @@ Create `src/commands/{resource}.spec.ts`.
 Follow the pattern in `src/commands/organization.spec.ts`:
 
 1. Mock the WorkOS client:
+
    ```typescript
    const mockSdk = {
      resourceName: {
@@ -73,6 +77,7 @@ Follow the pattern in `src/commands/organization.spec.ts`:
 2. Import `setOutputMode` from `../utils/output.js` (dynamic import after mock).
 
 3. Import your command handlers (dynamic import after mock):
+
    ```typescript
    const { setOutputMode } = await import('../utils/output.js');
    const { runResourceList, runResourceGet } = await import('./resource.js');
@@ -132,6 +137,7 @@ Pattern (from the organization command):
 ```
 
 Key details:
+
 - Wrap each handler with `await applyInsecureStorage(argv.insecureStorage)` at the top.
 - Use dynamic `import()` for the command module (lazy loading).
 - Use `resolveApiKey({ apiKey: argv.apiKey })` and `resolveApiBaseUrl()` from `./lib/api-key.js`.
@@ -143,6 +149,7 @@ Key details:
 Open `src/utils/help-json.ts`. Add a new entry to the `commands` array.
 
 Pattern:
+
 ```typescript
 {
   name: 'resource-name',

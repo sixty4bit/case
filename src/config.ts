@@ -8,8 +8,9 @@ interface ProjectsManifest {
 
 /** Load and parse projects.json from the case root. */
 export function loadProjects(caseRoot: string): Promise<ProjectEntry[]> {
-  return readFile(resolve(caseRoot, 'projects.json'), 'utf-8')
-    .then((raw) => (JSON.parse(raw) as ProjectsManifest).repos);
+  return readFile(resolve(caseRoot, 'projects.json'), 'utf-8').then(
+    (raw) => (JSON.parse(raw) as ProjectsManifest).repos,
+  );
 }
 
 /** Resolve a repo path (potentially relative) to absolute from caseRoot. */

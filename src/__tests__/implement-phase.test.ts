@@ -30,14 +30,30 @@ function makeConfig(overrides: Partial<PipelineConfig> = {}): PipelineConfig {
 const completedResult: AgentResult = {
   status: 'completed',
   summary: 'Fixed the bug',
-  artifacts: { commit: 'abc123', filesChanged: ['src/x.ts'], testsPassed: true, screenshotUrls: [], evidenceMarkers: ['.case-tested'], prUrl: null, prNumber: null },
+  artifacts: {
+    commit: 'abc123',
+    filesChanged: ['src/x.ts'],
+    testsPassed: true,
+    screenshotUrls: [],
+    evidenceMarkers: ['.case-tested'],
+    prUrl: null,
+    prNumber: null,
+  },
   error: null,
 };
 
 const failedResult: AgentResult = {
   status: 'failed',
   summary: '',
-  artifacts: { commit: null, filesChanged: [], testsPassed: false, screenshotUrls: [], evidenceMarkers: [], prUrl: null, prNumber: null },
+  artifacts: {
+    commit: null,
+    filesChanged: [],
+    testsPassed: false,
+    screenshotUrls: [],
+    evidenceMarkers: [],
+    prUrl: null,
+    prNumber: null,
+  },
   error: 'Tests failed: 3 failing',
 };
 

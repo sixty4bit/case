@@ -19,17 +19,17 @@ Pattern to follow: each phase mirrors its corresponding step in `skills/case/SKI
 
 ### New Files
 
-| File Path | Purpose |
-|-----------|---------|
-| `src/context/assembler.ts` | Per-role context assembly |
-| `src/context/prefetch.ts` | Deterministic repo context gathering |
-| `src/phases/implement.ts` | Step 4 + 4b: spawn implementer, intelligent retry |
-| `src/phases/verify.ts` | Step 5: spawn verifier |
-| `src/phases/review.ts` | Step 6: spawn reviewer |
-| `src/phases/close.ts` | Step 7: spawn closer |
-| `src/phases/retrospective.ts` | Step 9: spawn retrospective in background |
-| `src/__tests__/assembler.test.ts` | Tests for context assembly |
-| `src/__tests__/implement-phase.test.ts` | Tests for implementer phase logic |
+| File Path                               | Purpose                                           |
+| --------------------------------------- | ------------------------------------------------- |
+| `src/context/assembler.ts`              | Per-role context assembly                         |
+| `src/context/prefetch.ts`               | Deterministic repo context gathering              |
+| `src/phases/implement.ts`               | Step 4 + 4b: spawn implementer, intelligent retry |
+| `src/phases/verify.ts`                  | Step 5: spawn verifier                            |
+| `src/phases/review.ts`                  | Step 6: spawn reviewer                            |
+| `src/phases/close.ts`                   | Step 7: spawn closer                              |
+| `src/phases/retrospective.ts`           | Step 9: spawn retrospective in background         |
+| `src/__tests__/assembler.test.ts`       | Tests for context assembly                        |
+| `src/__tests__/implement-phase.test.ts` | Tests for implementer phase logic                 |
 
 ## Validation Commands
 

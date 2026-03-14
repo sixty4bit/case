@@ -36,12 +36,7 @@ export class TaskStore {
 
   /** Set task status — validates transition via task-status.sh. */
   async setStatus(status: TaskStatus): Promise<void> {
-    const result = await runScript('bash', [
-      this.taskStatusScript,
-      this.taskJsonPath,
-      'status',
-      status,
-    ]);
+    const result = await runScript('bash', [this.taskStatusScript, this.taskJsonPath, 'status', status]);
 
     if (result.exitCode !== 0) {
       throw new TaskStateError(result.stderr.trim() || `Failed to set status to ${status}`);
@@ -49,40 +44,20 @@ export class TaskStore {
   }
 
   /** Set an agent phase field (status, started, completed). */
-  async setAgentPhase(
-    agent: AgentName,
-    field: 'status' | 'started' | 'completed',
-    value: string,
-  ): Promise<void> {
-    const result = await runScript('bash', [
-      this.taskStatusScript,
-      this.taskJsonPath,
-      'agent',
-      agent,
-      field,
-      value,
-    ]);
+  async setAgentPhase(agent: AgentName, field: 'status' | 'started' | 'completed', value: string): Promise<void> {
+    const result = await runScript('bash', [this.taskStatusScript, this.taskJsonPath, 'agent', agent, field, value]);
 
     if (result.exitCode !== 0) {
-      throw new TaskStateError(
-        result.stderr.trim() || `Failed to set agents.${agent}.${field} to ${value}`,
-      );
+      throw new TaskStateError(result.stderr.trim() || `Failed to set agents.${agent}.${field} to ${value}`);
     }
   }
 
   /** Set a generic field (prUrl, prNumber, branch, etc). */
   async setField(field: string, value: string): Promise<void> {
-    const result = await runScript('bash', [
-      this.taskStatusScript,
-      this.taskJsonPath,
-      field,
-      value,
-    ]);
+    const result = await runScript('bash', [this.taskStatusScript, this.taskJsonPath, field, value]);
 
     if (result.exitCode !== 0) {
-      throw new TaskStateError(
-        result.stderr.trim() || `Failed to set ${field} to ${value}`,
-      );
+      throw new TaskStateError(result.stderr.trim() || `Failed to set ${field} to ${value}`);
     }
   }
 }

@@ -1,20 +1,26 @@
 import { parseArgs } from 'node:util';
 import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { buildPipelineConfig } from './config.js';
 import { runPipeline } from './pipeline.js';
+import { startServer } from './server.js';
 import { createLogger } from './util/logger.js';
-import type { PipelineMode } from './types.js';
+import type { PipelineMode, ServerConfig } from './types.js';
 
 const log = createLogger();
 
 async function main() {
-  const { values } = parseArgs({
+  const { values, positionals } = parseArgs({
     options: {
       task: { type: 'string', short: 't' },
       mode: { type: 'string', short: 'm' },
+      port: { type: 'string', short: 'p' },
+      host: { type: 'string' },
+      'webhook-secret': { type: 'string' },
       'dry-run': { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
     },
+    allowPositionals: true,
     strict: true,
   });
 
@@ -23,14 +29,25 @@ async function main() {
     process.exit(0);
   }
 
+  const command = positionals[0] ?? 'run';
+
+  if (command === 'serve') {
+    await runServe(values);
+  } else {
+    await runTask(values);
+  }
+}
+
+async function runTask(values: Record<string, unknown>) {
   if (!values.task) {
     process.stderr.write('Error: --task <path> is required\n');
     printUsage();
     process.exit(1);
   }
 
-  if (!existsSync(values.task)) {
-    process.stderr.write(`Error: task file not found: ${values.task}\n`);
+  const taskPath = values.task as string;
+  if (!existsSync(taskPath)) {
+    process.stderr.write(`Error: task file not found: ${taskPath}\n`);
     process.exit(1);
   }
 
@@ -42,9 +59,9 @@ async function main() {
 
   try {
     const config = await buildPipelineConfig({
-      taskJsonPath: values.task,
+      taskJsonPath: taskPath,
       mode,
-      dryRun: values['dry-run'],
+      dryRun: values['dry-run'] as boolean | undefined,
     });
 
     await runPipeline(config);
@@ -57,15 +74,69 @@ async function main() {
   }
 }
 
+async function runServe(values: Record<string, unknown>) {
+  const caseRoot = resolve(process.cwd());
+  const port = parseInt((values.port as string) ?? '3847', 10);
+  const host = (values.host as string) ?? '127.0.0.1';
+  const webhookSecret = (values['webhook-secret'] as string) ?? process.env.CASE_WEBHOOK_SECRET;
+
+  const ONE_HOUR = 60 * 60 * 1000;
+  const ONE_DAY = 24 * ONE_HOUR;
+
+  const serverConfig: ServerConfig = {
+    port,
+    host,
+    webhookSecret,
+    scanners: {
+      ci: {
+        enabled: true,
+        intervalMs: ONE_HOUR,
+        repos: [], // all repos
+        autoStart: false, // require human approval
+      },
+      staleDocs: {
+        enabled: true,
+        intervalMs: ONE_DAY,
+        repos: [],
+        autoStart: false,
+      },
+      deps: {
+        enabled: true,
+        intervalMs: 7 * ONE_DAY,
+        repos: [],
+        autoStart: false,
+      },
+    },
+  };
+
+  try {
+    await startServer(caseRoot, serverConfig);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    log.error('server crashed', { error: msg });
+    process.stderr.write(`Fatal: ${msg}\n`);
+    process.exit(1);
+  }
+}
+
 function printUsage() {
   process.stdout.write(`
-Usage: npx tsx src/index.ts --task <path> [options]
+Usage:
+  npx tsx src/index.ts [run] --task <path> [options]    Run pipeline for a task
+  npx tsx src/index.ts serve [options]                  Start as HTTP service
 
-Options:
-  --task, -t <path>     Path to .task.json file (required)
-  --mode, -m <mode>     attended | unattended (default: attended)
-  --dry-run             Log phase transitions without spawning agents
-  --help, -h            Show this help
+Run options:
+  --task, -t <path>         Path to .task.json file (required)
+  --mode, -m <mode>         attended | unattended (default: attended)
+  --dry-run                 Log phase transitions without spawning agents
+
+Serve options:
+  --port, -p <port>         HTTP port (default: 3847)
+  --host <host>             Bind address (default: 127.0.0.1)
+  --webhook-secret <secret> GitHub webhook secret (or CASE_WEBHOOK_SECRET env)
+
+Common:
+  --help, -h                Show this help
 `);
 }
 

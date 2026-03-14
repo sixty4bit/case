@@ -10,6 +10,8 @@ vi.mock('../phases/retrospective.js');
 vi.mock('../state/task-store.js');
 vi.mock('../notify.js');
 vi.mock('../util/run-script.js');
+vi.mock('../metrics/writer.js');
+vi.mock('../versioning/prompt-tracker.js');
 
 const { runPipeline } = await import('../pipeline.js');
 const { runImplementPhase } = await import('../phases/implement.js');
@@ -20,6 +22,8 @@ const { runRetrospectivePhase } = await import('../phases/retrospective.js');
 const { TaskStore } = await import('../state/task-store.js');
 const { createNotifier } = await import('../notify.js');
 const { runScript } = await import('../util/run-script.js');
+const { writeRunMetrics } = await import('../metrics/writer.js');
+const { getCurrentPromptVersions, findPriorRunId } = await import('../versioning/prompt-tracker.js');
 
 function makeConfig(overrides: Partial<PipelineConfig> = {}): PipelineConfig {
   return {
@@ -38,7 +42,15 @@ function makeConfig(overrides: Partial<PipelineConfig> = {}): PipelineConfig {
 const completedResult: AgentResult = {
   status: 'completed',
   summary: 'Done',
-  artifacts: { commit: 'abc', filesChanged: [], testsPassed: true, screenshotUrls: [], evidenceMarkers: [], prUrl: null, prNumber: null },
+  artifacts: {
+    commit: 'abc',
+    filesChanged: [],
+    testsPassed: true,
+    screenshotUrls: [],
+    evidenceMarkers: [],
+    prUrl: null,
+    prNumber: null,
+  },
   error: null,
 };
 
@@ -51,7 +63,15 @@ const prResult: AgentResult = {
 const failedResult: AgentResult = {
   status: 'failed',
   summary: 'Failed',
-  artifacts: { commit: null, filesChanged: [], testsPassed: false, screenshotUrls: [], evidenceMarkers: [], prUrl: null, prNumber: null },
+  artifacts: {
+    commit: null,
+    filesChanged: [],
+    testsPassed: false,
+    screenshotUrls: [],
+    evidenceMarkers: [],
+    prUrl: null,
+    prNumber: null,
+  },
   error: 'Something went wrong',
 };
 
@@ -90,6 +110,11 @@ describe('runPipeline', () => {
     // Mock log-run.sh
     vi.mocked(runScript).mockResolvedValue({ stdout: 'OK', stderr: '', exitCode: 0 });
 
+    // Mock metrics and versioning
+    vi.mocked(writeRunMetrics).mockResolvedValue(undefined);
+    vi.mocked(getCurrentPromptVersions).mockResolvedValue({});
+    vi.mocked(findPriorRunId).mockResolvedValue(null);
+
     // Default: retrospective does nothing
     vi.mocked(runRetrospectivePhase).mockResolvedValue(undefined);
   });
@@ -108,7 +133,11 @@ describe('runPipeline', () => {
     expect(runClosePhase).toHaveBeenCalledTimes(1);
     expect(runRetrospectivePhase).toHaveBeenCalledTimes(1);
     expect(runRetrospectivePhase).toHaveBeenCalledWith(
-      expect.anything(), expect.anything(), expect.anything(), 'completed', undefined,
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      'completed',
+      undefined,
     );
     expect(mockNotifier.send).toHaveBeenCalledWith(expect.stringContaining('PR created'));
     expect(mockNotifier.send).toHaveBeenCalledWith('Pipeline completed successfully.');
@@ -121,7 +150,11 @@ describe('runPipeline', () => {
     await runPipeline(makeConfig());
 
     expect(runRetrospectivePhase).toHaveBeenCalledWith(
-      expect.anything(), expect.anything(), expect.anything(), 'failed', 'implementer',
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      'failed',
+      'implementer',
     );
     expect(mockNotifier.send).toHaveBeenCalledWith(expect.stringContaining('failed'));
   });
@@ -134,7 +167,11 @@ describe('runPipeline', () => {
     await runPipeline(makeConfig({ mode: 'unattended' }));
 
     expect(runRetrospectivePhase).toHaveBeenCalledWith(
-      expect.anything(), expect.anything(), expect.anything(), 'failed', 'implementer',
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      'failed',
+      'implementer',
     );
   });
 
@@ -149,19 +186,30 @@ describe('runPipeline', () => {
 
     expect(runClosePhase).toHaveBeenCalledTimes(1);
     expect(runRetrospectivePhase).toHaveBeenCalledWith(
-      expect.anything(), expect.anything(), expect.anything(), 'completed', undefined,
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+      'completed',
+      undefined,
     );
   });
 
   it('re-entry from verifying status -> starts at verify phase', async () => {
-    const verifyingTask = { ...mockTask, status: 'verifying' as const, agents: { verifier: { started: null, completed: null, status: 'running' as const } } };
-    vi.mocked(TaskStore).mockImplementation(() => ({
-      read: vi.fn().mockResolvedValue(verifyingTask),
-      readStatus: vi.fn().mockResolvedValue('verifying'),
-      setStatus: vi.fn().mockResolvedValue(undefined),
-      setAgentPhase: vi.fn().mockResolvedValue(undefined),
-      setField: vi.fn().mockResolvedValue(undefined),
-    }) as any);
+    const verifyingTask = {
+      ...mockTask,
+      status: 'verifying' as const,
+      agents: { verifier: { started: null, completed: null, status: 'running' as const } },
+    };
+    vi.mocked(TaskStore).mockImplementation(
+      () =>
+        ({
+          read: vi.fn().mockResolvedValue(verifyingTask),
+          readStatus: vi.fn().mockResolvedValue('verifying'),
+          setStatus: vi.fn().mockResolvedValue(undefined),
+          setAgentPhase: vi.fn().mockResolvedValue(undefined),
+          setField: vi.fn().mockResolvedValue(undefined),
+        }) as any,
+    );
 
     vi.mocked(runVerifyPhase).mockResolvedValue({ result: completedResult, nextPhase: 'review' });
     vi.mocked(runReviewPhase).mockResolvedValue({ result: completedResult, nextPhase: 'close' });

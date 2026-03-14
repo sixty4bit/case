@@ -64,13 +64,7 @@ describe('assemblePrompt', () => {
       workingMemory: '## Current State\n- Phase: implementing\n',
     };
 
-    const prompt = await assemblePrompt(
-      'implementer',
-      makeConfig(),
-      makeTask(),
-      repoContext,
-      new Map(),
-    );
+    const prompt = await assemblePrompt('implementer', makeConfig(), makeTask(), repoContext, new Map());
 
     expect(prompt).toContain('# Implementer Template');
     expect(prompt).toContain('## Task Context');
@@ -87,13 +81,7 @@ describe('assemblePrompt', () => {
       fastTestCommand: 'pnpm vitest --related',
     });
 
-    const prompt = await assemblePrompt(
-      'implementer',
-      makeConfig(),
-      task,
-      emptyRepoContext,
-      new Map(),
-    );
+    const prompt = await assemblePrompt('implementer', makeConfig(), task, emptyRepoContext, new Map());
 
     expect(prompt).toContain('Check command');
     expect(prompt).toContain('grep -c TODO src/');
@@ -111,13 +99,7 @@ describe('assemblePrompt', () => {
       workingMemory: 'should not appear',
     };
 
-    const prompt = await assemblePrompt(
-      'verifier',
-      makeConfig(),
-      makeTask(),
-      repoContext,
-      new Map(),
-    );
+    const prompt = await assemblePrompt('verifier', makeConfig(), makeTask(), repoContext, new Map());
 
     expect(prompt).toContain('# Verifier Template');
     expect(prompt).toContain('Task file');
@@ -132,13 +114,7 @@ describe('assemblePrompt', () => {
       workingMemory: 'implementation detail',
     };
 
-    const prompt = await assemblePrompt(
-      'reviewer',
-      makeConfig(),
-      makeTask(),
-      repoContext,
-      new Map(),
-    );
+    const prompt = await assemblePrompt('reviewer', makeConfig(), makeTask(), repoContext, new Map());
 
     expect(prompt).toContain('# Reviewer Template');
     expect(prompt).not.toContain('implementation detail');
@@ -181,13 +157,7 @@ describe('assemblePrompt', () => {
       ['reviewer', reviewerResult],
     ]) as Map<any, any>;
 
-    const prompt = await assemblePrompt(
-      'closer',
-      makeConfig(),
-      makeTask(),
-      emptyRepoContext,
-      results,
-    );
+    const prompt = await assemblePrompt('closer', makeConfig(), makeTask(), emptyRepoContext, results);
 
     expect(prompt).toContain('# Closer Template');
     expect(prompt).toContain('Verifier AGENT_RESULT');
@@ -197,13 +167,7 @@ describe('assemblePrompt', () => {
   });
 
   it('missing learnings file results in empty string (not error)', async () => {
-    const prompt = await assemblePrompt(
-      'implementer',
-      makeConfig(),
-      makeTask(),
-      emptyRepoContext,
-      new Map(),
-    );
+    const prompt = await assemblePrompt('implementer', makeConfig(), makeTask(), emptyRepoContext, new Map());
 
     expect(prompt).toContain('# Implementer Template');
     expect(prompt).not.toContain('Repo Learnings');

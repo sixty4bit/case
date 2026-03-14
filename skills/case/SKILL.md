@@ -1,7 +1,7 @@
 ---
 name: case
 description: WorkOS OSS harness — cross-repo orchestration, conventions, playbooks, and task dispatch. Use when working across WorkOS open source repos or when you need harness context.
-argument-hint: "[issue-number] or [LINEAR-ID]"
+argument-hint: '[issue-number] or [LINEAR-ID]'
 ---
 
 # Case — WorkOS OSS Harness
@@ -17,14 +17,14 @@ All paths below are relative to the skill's cache directory. For scripts, tasks,
 
 Case uses a **six-agent pipeline** to prevent context pollution and enable self-improvement. Each agent has a focused context window and a single responsibility:
 
-| Agent | Responsibility | Tools |
-|---|---|---|
-| **Orchestrator** (you) | Parse issue, create task, baseline smoke test, spawn subagents | AskUserQuestion, Agent, Read, Bash |
-| **Implementer** | Write code, run unit tests, commit (with WIP checkpoints), read repo learnings | Read, Edit, Write, Bash, Glob, Grep |
-| **Verifier** | Manual testing with Playwright, evidence markers, screenshots | Read, Bash, Glob, Grep |
-| **Reviewer** | Review diff against golden principles, classify findings, gate PR creation | Read, Bash, Glob, Grep |
-| **Closer** | Create PR with thorough description, satisfy hook gates, post review comments | Read, Bash, Glob, Grep |
-| **Retrospective** | Apply harness improvements directly, maintain per-repo learnings | Read, Edit, Write, Bash, Glob, Grep |
+| Agent                  | Responsibility                                                                 | Tools                               |
+| ---------------------- | ------------------------------------------------------------------------------ | ----------------------------------- |
+| **Orchestrator** (you) | Parse issue, create task, baseline smoke test, spawn subagents                 | AskUserQuestion, Agent, Read, Bash  |
+| **Implementer**        | Write code, run unit tests, commit (with WIP checkpoints), read repo learnings | Read, Edit, Write, Bash, Glob, Grep |
+| **Verifier**           | Manual testing with Playwright, evidence markers, screenshots                  | Read, Bash, Glob, Grep              |
+| **Reviewer**           | Review diff against golden principles, classify findings, gate PR creation     | Read, Bash, Glob, Grep              |
+| **Closer**             | Create PR with thorough description, satisfy hook gates, post review comments  | Read, Bash, Glob, Grep              |
+| **Retrospective**      | Apply harness improvements directly, maintain per-repo learnings               | Read, Edit, Write, Bash, Glob, Grep |
 
 Agent prompt files: `/Users/nicknisi/Developer/case/agents/{implementer,verifier,reviewer,closer,retrospective}.md`
 
@@ -60,16 +60,19 @@ AGENT_RESULT>>>
 Parse the arguments passed to `/case`. The argument determines the workflow:
 
 **No argument** — `/case`
+
 1. Check if `.case-active` exists with a task ID → if so, resume that task (see Re-entry Semantics below)
 2. Otherwise, load harness context for the current task. Follow the Task Routing table below.
 
 **GitHub issue number** — `/case 34`
+
 1. Detect the current repo from the working directory (`git remote get-url origin`)
 2. Fetch the issue: `gh issue view 34 --json title,body,labels,comments`
 3. Read the issue title, body, and comments to understand the task
 4. Run the **Orchestrator Flow** below (steps 0-7)
 
 **Linear issue ID** — `/case DX-1234`
+
 1. Try the Linear MCP tools first (available via claude.ai integration):
    - Use `mcp__claude_ai_Linear__get_issue` with the issue ID
    - Read title, description, comments, status, and assignee
@@ -78,6 +81,7 @@ Parse the arguments passed to `/case`. The argument determines the workflow:
 4. Run the **Orchestrator Flow** below (steps 0-7)
 
 **How to detect argument type:**
+
 - Matches `/^\d+$/` → GitHub issue number (e.g., `34`, `142`)
 - Matches `/^[A-Z]+-\d+$/` → Linear issue ID (e.g., `DX-1234`, `AUTH-42`)
 - Anything else → treat as a free-form task description, use Task Routing
@@ -108,12 +112,13 @@ After parsing and fetching the issue, execute this pipeline:
 3. **Free text argument**: no automatic re-entry. Proceed to step 1.
 
 **Resume status table** (when an existing task is found):
-   - `active` → go to step 3 (Branch & Baseline)
-   - `implementing` → step 4 (Implementer) if implementer failed, step 5 (Verifier) if implementer completed
-   - `verifying` → step 5 (Verifier) if verifier failed, step 6 (Reviewer) if verifier completed
-   - `reviewing` → step 6 (Reviewer) if reviewer failed/blocked, step 7 (Closer) if reviewer completed
-   - `closing` → step 7 (Closer)
-   - `pr-opened` → report "PR already exists" and done
+
+- `active` → go to step 3 (Branch & Baseline)
+- `implementing` → step 4 (Implementer) if implementer failed, step 5 (Verifier) if implementer completed
+- `verifying` → step 5 (Verifier) if verifier failed, step 6 (Reviewer) if verifier completed
+- `reviewing` → step 6 (Reviewer) if reviewer failed/blocked, step 7 (Closer) if reviewer completed
+- `closing` → step 7 (Closer)
+- `pr-opened` → report "PR already exists" and done
 
 If not found → proceed to step 1
 
@@ -167,11 +172,13 @@ _(Already done in the Arguments section above)_
    ```bash
    bash /Users/nicknisi/Developer/case/scripts/bootstrap.sh <repo-name>
    ```
+
    - If FAIL: Report broken baseline to user via `AskUserQuestion`. Do not spawn implementer. **Go to step 9 (Retrospective)** with outcome "failed" and failed agent "orchestrator/baseline".
    - If PASS: continue
 4. Append to task file progress log:
    ```markdown
    ### Orchestrator — <timestamp>
+
    - Created task from <issue-type> <issue-ref>
    - Baseline smoke test: PASS
    - Spawning implementer
@@ -193,6 +200,7 @@ npx tsx /Users/nicknisi/Developer/case/src/index.ts --task <task.json path> --mo
 The orchestrator handles Steps 4-9 deterministically via a while/switch loop. If it exits with code 0, the pipeline is complete. If it exits with code 1, check the task JSON and run log for failure details.
 
 **When to use this vs the manual steps below:**
+
 - **Prefer the orchestrator** — it provides deterministic flow control, hard-capped retries, and role-specific context assembly.
 - **Fall back to manual steps** — if the orchestrator is unavailable or you need fine-grained control (e.g., debugging a specific phase).
 
@@ -229,6 +237,7 @@ One targeted retry is worth more than three identical retries. Analyze the failu
    - If `false` → skip retry, go to step 4c (surface to user)
    - If `true` → continue with retry
 3. Respawn the implementer with adjusted context. Prepend this to the original prompt:
+
    ```
    ## RETRY CONTEXT — Previous attempt failed
 
@@ -240,7 +249,9 @@ One targeted retry is worth more than three identical retries. Analyze the failu
    Do NOT repeat the previous approach. Read your working memory ({task-stem}.working.md)
    for details on what was tried. Focus on the suggested approach above.
    ```
+
    Use the `Agent` tool with the adjusted prompt. Same subagent_type.
+
 4. Parse the retry's `AGENT_RESULT`:
    - If `status == "completed"` → continue to step 5 (Verifier)
    - If `status == "failed"` → go to step 4c (surface to user)
@@ -250,6 +261,7 @@ One targeted retry is worth more than three identical retries. Analyze the failu
 ### Step 4c: Surface Implementer Failure to User
 
 Report the failure to user via `AskUserQuestion`:
+
 - Include both the original error and the retry result (if retry was attempted)
 - Options: "Re-run with guidance" | "Abort"
 - If "Abort": **go to step 9 (Retrospective)** with outcome "failed" and failed agent "implementer".
@@ -363,6 +375,7 @@ bash /Users/nicknisi/Developer/case/scripts/bootstrap.sh <repo-name>
 ```
 
 The bootstrap script runs the repo's `setup`, `build`, `test`, `typecheck`, and `lint` commands (from `projects.json`). If any fail:
+
 - **Stop the orchestrator.** Do not spawn the implementer.
 - Report the failure to the user via `AskUserQuestion`
 - Suggest fixing the baseline before retrying `/case`
@@ -381,6 +394,7 @@ This is embedded in Step 3 of the Orchestrator Flow but documented here for clar
 ## Always Load
 
 Read these first for landscape and rules:
+
 - `../../AGENTS.md` — project landscape, navigation, task dispatch overview
 - `../../docs/golden-principles.md` — invariants to follow across all repos
 
@@ -388,20 +402,20 @@ Read these first for landscape and rules:
 
 Based on the user's request, load the relevant context:
 
-| If the task involves... | Read... |
-| --- | --- |
-| The WorkOS CLI | `../../docs/architecture/cli.md` and `../../docs/playbooks/add-cli-command.md` |
-| New AuthKit framework integration | `../../docs/architecture/authkit-framework.md` and `../../docs/playbooks/add-authkit-framework.md` |
-| Session management (authkit-session) | `../../docs/architecture/authkit-session.md` |
-| Skills plugin | `../../docs/architecture/skills-plugin.md` |
-| Bug fix in any repo | `../../docs/playbooks/fix-bug.md` |
-| Feature request in any repo | `../../docs/playbooks/add-feature.md` |
-| Cross-repo change | `../../docs/playbooks/cross-repo-update.md` |
-| Ideation contract | Use `/case:from-ideation <folder>` instead — separate skill for ideation-sourced work |
-| Commit conventions | `../../docs/conventions/commits.md` |
-| Testing standards | `../../docs/conventions/testing.md` |
-| PR structure / review | `../../docs/conventions/pull-requests.md` |
-| Code style / formatting | `../../docs/conventions/code-style.md` |
+| If the task involves...              | Read...                                                                                            |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| The WorkOS CLI                       | `../../docs/architecture/cli.md` and `../../docs/playbooks/add-cli-command.md`                     |
+| New AuthKit framework integration    | `../../docs/architecture/authkit-framework.md` and `../../docs/playbooks/add-authkit-framework.md` |
+| Session management (authkit-session) | `../../docs/architecture/authkit-session.md`                                                       |
+| Skills plugin                        | `../../docs/architecture/skills-plugin.md`                                                         |
+| Bug fix in any repo                  | `../../docs/playbooks/fix-bug.md`                                                                  |
+| Feature request in any repo          | `../../docs/playbooks/add-feature.md`                                                              |
+| Cross-repo change                    | `../../docs/playbooks/cross-repo-update.md`                                                        |
+| Ideation contract                    | Use `/case:from-ideation <folder>` instead — separate skill for ideation-sourced work              |
+| Commit conventions                   | `../../docs/conventions/commits.md`                                                                |
+| Testing standards                    | `../../docs/conventions/testing.md`                                                                |
+| PR structure / review                | `../../docs/conventions/pull-requests.md`                                                          |
+| Code style / formatting              | `../../docs/conventions/code-style.md`                                                             |
 
 ## Project Manifest
 
@@ -418,6 +432,7 @@ To create a task for async agent execution:
 5. Update task JSON status as agents complete work via `/Users/nicknisi/Developer/case/scripts/task-status.sh`
 
 Available templates:
+
 - `/Users/nicknisi/Developer/case/tasks/templates/cli-command.md` — add a CLI command
 - `/Users/nicknisi/Developer/case/tasks/templates/authkit-framework.md` — new AuthKit framework integration
 - `/Users/nicknisi/Developer/case/tasks/templates/bug-fix.md` — fix a bug in any repo
@@ -453,6 +468,7 @@ Skill: playwright-cli
 The skill provides `playwright-cli` commands: `open`, `goto`, `click`, `type`, `screenshot`, `snapshot`, and more. Use `Bash(playwright-cli:*)` for all browser interactions.
 
 Quick reference:
+
 ```bash
 playwright-cli open                          # open browser
 playwright-cli video-start                   # start recording (before navigating)
@@ -469,6 +485,7 @@ playwright-cli video-stop /tmp/verify.webm   # stop recording and save video
 Credentials for testing sign-in flows are at `~/.config/case/credentials`. Read this file to get test values.
 
 Expected keys:
+
 ```
 WORKOS_API_KEY=sk_test_...
 WORKOS_CLIENT_ID=client_...
@@ -478,6 +495,7 @@ WORKOS_COOKIE_PASSWORD=... (32+ chars for session encryption)
 ```
 
 Use these when testing auth flows with Playwright:
+
 1. Start the example app (e.g., `cd ../authkit-nextjs/examples/... && pnpm dev`)
 2. Navigate to the sign-in page
 3. Fill in test credentials from `~/.config/case/credentials`
@@ -533,9 +551,11 @@ Use when Playwright isn't sufficient — e.g., inspecting live state, debugging 
 ### Example apps
 
 Some repos include example apps for end-to-end testing:
+
 - `../authkit-nextjs/examples/` — Next.js app wired to AuthKit
 
 ### When to use which
+
 - Unit tests → always, for logic verification
 - **Playwright → front-end changes, auth flows, redirects, cookie behavior, visual verification (preferred)**
 - Chrome DevTools MCP → interactive debugging only, when Playwright can't answer the question

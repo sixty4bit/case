@@ -56,19 +56,20 @@ export function parseAgentResult(raw: string): AgentResult {
     return syntheticFailed(`AGENT_RESULT invalid status: ${obj.status}`);
   }
 
-  const artifacts = (typeof obj.artifacts === 'object' && obj.artifacts !== null)
-    ? { ...DEFAULT_ARTIFACTS, ...(obj.artifacts as Record<string, unknown>) }
-    : { ...DEFAULT_ARTIFACTS };
+  const artifacts =
+    typeof obj.artifacts === 'object' && obj.artifacts !== null
+      ? { ...DEFAULT_ARTIFACTS, ...(obj.artifacts as Record<string, unknown>) }
+      : { ...DEFAULT_ARTIFACTS };
 
   return {
     status: obj.status as AgentResult['status'],
     summary: typeof obj.summary === 'string' ? obj.summary : '',
     artifacts: {
       commit: typeof artifacts.commit === 'string' ? artifacts.commit : null,
-      filesChanged: Array.isArray(artifacts.filesChanged) ? artifacts.filesChanged as string[] : [],
+      filesChanged: Array.isArray(artifacts.filesChanged) ? (artifacts.filesChanged as string[]) : [],
       testsPassed: typeof artifacts.testsPassed === 'boolean' ? artifacts.testsPassed : null,
-      screenshotUrls: Array.isArray(artifacts.screenshotUrls) ? artifacts.screenshotUrls as string[] : [],
-      evidenceMarkers: Array.isArray(artifacts.evidenceMarkers) ? artifacts.evidenceMarkers as string[] : [],
+      screenshotUrls: Array.isArray(artifacts.screenshotUrls) ? (artifacts.screenshotUrls as string[]) : [],
+      evidenceMarkers: Array.isArray(artifacts.evidenceMarkers) ? (artifacts.evidenceMarkers as string[]) : [],
       prUrl: typeof artifacts.prUrl === 'string' ? artifacts.prUrl : null,
       prNumber: typeof artifacts.prNumber === 'number' ? artifacts.prNumber : null,
     },

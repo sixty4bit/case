@@ -29,7 +29,15 @@ export async function runClosePhase(
       result: {
         status: 'completed',
         summary: '[dry-run] close phase skipped',
-        artifacts: { commit: null, filesChanged: [], testsPassed: null, screenshotUrls: [], evidenceMarkers: [], prUrl: null, prNumber: null },
+        artifacts: {
+          commit: null,
+          filesChanged: [],
+          testsPassed: null,
+          screenshotUrls: [],
+          evidenceMarkers: [],
+          prUrl: null,
+          prNumber: null,
+        },
         error: null,
       },
       nextPhase: 'retrospective',

@@ -15,8 +15,8 @@ The orchestrator uses the Claude Code `Agent` tool to spawn subagents, passing e
 
 ### Modified Files
 
-| File Path | Changes |
-|-----------|---------|
+| File Path              | Changes                                                                                                                                                                                  |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `skills/case/SKILL.md` | Major rewrite: add orchestrator flow with subagent dispatch, baseline smoke test, task JSON creation. Preserve argument parsing, routing table, rules, and verification tools reference. |
 
 ## Implementation Details
@@ -240,17 +240,17 @@ ORCHESTRATOR FLOW
 
 ## Error Handling
 
-| Error Scenario | Handling Strategy |
-|---|---|
-| Bootstrap smoke test fails | Stop orchestrator. Report broken baseline to user. Suggest fixing before proceeding. Do not spawn implementer. |
-| Implementer fails (tests don't pass, can't reproduce bug) | Stop orchestrator. Report implementer's error to user via AskUserQuestion. User decides whether to retry, debug manually, or abort. |
-| Verifier fails + src/ changed | Verification is mandatory (hook blocks without it). Options: fix-and-retry or abort. No skip. |
-| Verifier fails + no src/ changed | Verification is optional. Options: fix-and-retry, skip, or abort. |
-| Closer fails (hooks block PR) | Report missing prerequisites. Suggest which steps to run (mark-tested.sh, mark-manual-tested.sh). User decides next step. |
-| Agent prompt file not found | Stop with clear error: "Agent prompt file not found at /Users/nicknisi/Developer/case/agents/{name}.md — is the case plugin installed correctly?" |
-| No AGENT_RESULT in subagent response | Treat as failed. Log the raw response for debugging. Report to user. |
-| Re-entry: existing task found | Resume from last completed phase. Do not recreate task file or branch. |
-| Task JSON companion missing | Orchestrator creates it. If it goes missing mid-flow, recreate with current known state. |
+| Error Scenario                                            | Handling Strategy                                                                                                                                 |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bootstrap smoke test fails                                | Stop orchestrator. Report broken baseline to user. Suggest fixing before proceeding. Do not spawn implementer.                                    |
+| Implementer fails (tests don't pass, can't reproduce bug) | Stop orchestrator. Report implementer's error to user via AskUserQuestion. User decides whether to retry, debug manually, or abort.               |
+| Verifier fails + src/ changed                             | Verification is mandatory (hook blocks without it). Options: fix-and-retry or abort. No skip.                                                     |
+| Verifier fails + no src/ changed                          | Verification is optional. Options: fix-and-retry, skip, or abort.                                                                                 |
+| Closer fails (hooks block PR)                             | Report missing prerequisites. Suggest which steps to run (mark-tested.sh, mark-manual-tested.sh). User decides next step.                         |
+| Agent prompt file not found                               | Stop with clear error: "Agent prompt file not found at /Users/nicknisi/Developer/case/agents/{name}.md — is the case plugin installed correctly?" |
+| No AGENT_RESULT in subagent response                      | Treat as failed. Log the raw response for debugging. Report to user.                                                                              |
+| Re-entry: existing task found                             | Resume from last completed phase. Do not recreate task file or branch.                                                                            |
+| Task JSON companion missing                               | Orchestrator creates it. If it goes missing mid-flow, recreate with current known state.                                                          |
 
 ## Testing Requirements
 
