@@ -1,5 +1,4 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { resolve } from 'node:path';
 import type { ProjectEntry, ServerConfig, TaskCreateRequest } from './types.js';
 import { loadProjects } from './config.js';
 import { createTask } from './entry/task-factory.js';
@@ -96,7 +95,7 @@ async function handleRequest(
 
   // Create task manually
   if (method === 'POST' && url.pathname === '/tasks') {
-    await handleCreateTask(req, res, caseRoot, pendingTasks);
+    await handleCreateTask(req, res, caseRoot);
     return;
   }
 
@@ -169,7 +168,6 @@ async function handleCreateTask(
   req: IncomingMessage,
   res: ServerResponse,
   caseRoot: string,
-  pendingTasks: TaskCreateRequest[],
 ): Promise<void> {
   const body = await readBody(req);
 

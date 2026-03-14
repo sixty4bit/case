@@ -1,8 +1,6 @@
 import type { AgentName, AgentResult, PipelineConfig } from '../types.js';
 import { TaskStore } from '../state/task-store.js';
 import { spawnAgent } from '../agent-runner.js';
-import { assemblePrompt } from '../context/assembler.js';
-import { prefetchRepoContext } from '../context/prefetch.js';
 import { createLogger } from '../util/logger.js';
 
 const log = createLogger();
@@ -24,9 +22,6 @@ export async function runRetrospectivePhase(
     log.phase('retrospective', 'dry-run-skip');
     return;
   }
-
-  const task = await store.read();
-  const repoContext = await prefetchRepoContext(config, 'closer'); // minimal context
 
   // Build retrospective-specific context
   const retroContext = [
