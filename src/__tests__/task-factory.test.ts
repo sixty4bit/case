@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'bun:test';
 import { createTask } from '../entry/task-factory.js';
 import type { TaskCreateRequest } from '../types.js';
 import { readFile, rm, mkdir } from 'node:fs/promises';
@@ -27,20 +27,17 @@ describe('createTask', () => {
     expect(result.taskJsonPath).toContain('.task.json');
     expect(result.taskMdPath).toContain('.md');
 
-    // Verify task.json contents
     const taskJson = JSON.parse(await readFile(result.taskJsonPath, 'utf-8'));
     expect(taskJson.id).toBe(result.taskId);
     expect(taskJson.repo).toBe('cli');
     expect(taskJson.status).toBe('active');
     expect(taskJson.tested).toBe(false);
 
-    // Verify task.md contents
     const taskMd = await readFile(result.taskMdPath, 'utf-8');
     expect(taskMd).toContain('Fix broken test');
     expect(taskMd).toContain('The login test');
     expect(taskMd).toContain('Repo:** cli');
 
-    // Cleanup
     await rm(tempDir, { recursive: true, force: true });
   });
 

@@ -1,26 +1,31 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterAll } from 'bun:test';
 import { assemblePrompt } from '../context/assembler.js';
 import type { AgentResult, PipelineConfig, TaskJson } from '../types.js';
+import { writeFile, mkdir, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
-// Mock fs.readFile to return agent templates
-vi.mock('node:fs/promises', () => ({
-  readFile: vi.fn(async (path: string) => {
-    if (path.includes('agents/implementer.md')) return '# Implementer Template';
-    if (path.includes('agents/verifier.md')) return '# Verifier Template';
-    if (path.includes('agents/reviewer.md')) return '# Reviewer Template';
-    if (path.includes('agents/closer.md')) return '# Closer Template';
-    throw new Error(`unexpected read: ${path}`);
-  }),
-}));
+// Use real temp files instead of mocking node:fs/promises
+// (avoids mock.module conflicts with other test files)
+const tempCaseRoot = join(tmpdir(), `case-assembler-test-${Date.now()}`);
+
+async function setupTemplates() {
+  const agentsDir = join(tempCaseRoot, 'agents');
+  await mkdir(agentsDir, { recursive: true });
+  await writeFile(join(agentsDir, 'implementer.md'), '# Implementer Template');
+  await writeFile(join(agentsDir, 'verifier.md'), '# Verifier Template');
+  await writeFile(join(agentsDir, 'reviewer.md'), '# Reviewer Template');
+  await writeFile(join(agentsDir, 'closer.md'), '# Closer Template');
+}
 
 function makeConfig(overrides: Partial<PipelineConfig> = {}): PipelineConfig {
   return {
     mode: 'attended',
-    taskJsonPath: '/case/tasks/active/cli-1-issue-53.task.json',
-    taskMdPath: '/case/tasks/active/cli-1-issue-53.md',
+    taskJsonPath: join(tempCaseRoot, 'tasks/active/cli-1-issue-53.task.json'),
+    taskMdPath: join(tempCaseRoot, 'tasks/active/cli-1-issue-53.md'),
     repoPath: '/repos/cli',
     repoName: 'cli',
-    caseRoot: '/case',
+    caseRoot: tempCaseRoot,
     maxRetries: 1,
     dryRun: false,
     ...overrides,
@@ -53,8 +58,12 @@ const emptyRepoContext = {
 };
 
 describe('assemblePrompt', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
+  beforeEach(async () => {
+    await setupTemplates();
+  });
+
+  afterAll(async () => {
+    await rm(tempCaseRoot, { recursive: true, force: true });
   });
 
   it('implementer context includes learnings and working memory', async () => {

@@ -12,8 +12,7 @@
     "lint": "oxlint",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "for f in src/__tests__/*.test.ts; do bun test \"$f\" || exit 1; done",
     "start": "bun src/index.ts",
     "serve": "bun src/index.ts serve"
   },
@@ -24,7 +23,6 @@
     "@types/node": "^22.0.0",
     "oxfmt": "^0.40.0",
     "oxlint": "^1.55.0",
-    "typescript": "^5.7.0",
-    "vitest": "^3.0.0"
+    "typescript": "^5.7.0"
   }
 }

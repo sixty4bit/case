@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from 'bun:test';
 import { verifyWebhookSignature, parseGitHubEvent } from '../entry/github-webhook.js';
 import { createHmac } from 'node:crypto';
 
