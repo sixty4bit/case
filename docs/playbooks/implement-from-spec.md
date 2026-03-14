@@ -86,6 +86,7 @@ Fix any failures before proceeding.
    feat(scope): implement {phase description}
    ```
 3. Append to the task file's Progress Log:
+
    ```markdown
    ### Implementer — {timestamp}
 
@@ -95,6 +96,7 @@ Fix any failures before proceeding.
    - Tests: {pass count} passing
    - Commit: {hash}
    ```
+
 4. Update task JSON agent phase to completed
 
 ## Multi-Phase Context

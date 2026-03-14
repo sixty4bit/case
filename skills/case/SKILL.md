@@ -169,13 +169,16 @@ _(Already done in the Arguments section above)_
    - Exists → `git checkout <branch>` (resume)
    - Not exists → `git checkout -b <branch>` (create)
 3. Run baseline smoke test:
+
    ```bash
    bash /Users/nicknisi/Developer/case/scripts/bootstrap.sh <repo-name>
    ```
 
    - If FAIL: Report broken baseline to user via `AskUserQuestion`. Do not spawn implementer. **Go to step 9 (Retrospective)** with outcome "failed" and failed agent "orchestrator/baseline".
    - If PASS: continue
+
 4. Append to task file progress log:
+
    ```markdown
    ### Orchestrator — <timestamp>
 
@@ -183,6 +186,7 @@ _(Already done in the Arguments section above)_
    - Baseline smoke test: PASS
    - Spawning implementer
    ```
+
 5. Update task JSON:
    ```bash
    bash /Users/nicknisi/Developer/case/scripts/task-status.sh <task.json> agent orchestrator status completed

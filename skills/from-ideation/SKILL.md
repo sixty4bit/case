@@ -124,6 +124,7 @@ One branch. One PR. Phases commit sequentially. Verification and review cover th
    ```
 
 4. Append to task progress log:
+
    ```markdown
    ### Orchestrator — {timestamp}
 

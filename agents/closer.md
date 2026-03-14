@@ -204,6 +204,7 @@ Only post if there are actual findings to share. Skip this step if the reviewer 
    The hook's URL extraction from tool output can fail silently — this ensures the task JSON always records the PR URL. This is not optional; a null `prUrl` makes the task record incomplete.
 
 2. **Append to the task file's Progress Log**:
+
    ```markdown
    ### Closer — <ISO timestamp>
 
