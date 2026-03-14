@@ -1,4 +1,5 @@
 import type { ProjectEntry, TaskCreateRequest, TriggerSource } from '../../types.js';
+import { runScript } from '../../util/run-script.js';
 import { createLogger } from '../../util/logger.js';
 
 const log = createLogger();
@@ -13,7 +14,8 @@ interface WorkflowRun {
 }
 
 /** Track which failures we've already created tasks for (prevents duplicates). */
-const seenFailures = new Set<string>();
+const seenFailures = new Map<string, number>();
+const SEEN_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Scan GitHub Actions for CI failures on main across all repos.
@@ -27,13 +29,15 @@ export async function scanCIFailures(repos: ProjectEntry[]): Promise<TaskCreateR
     runId: `ci-${Date.now().toString(36)}`,
   };
 
+  evictStaleEntries(seenFailures);
+
   for (const repo of repos) {
     try {
       const failures = await getRecentFailures(repo.remote);
       for (const failure of failures) {
         const key = `${repo.name}:${failure.databaseId}`;
         if (seenFailures.has(key)) continue;
-        seenFailures.add(key);
+        seenFailures.set(key, Date.now());
 
         tasks.push({
           repo: repo.name,
@@ -70,30 +74,22 @@ async function getRecentFailures(remote: string): Promise<WorkflowRun[]> {
   if (!match) return [];
 
   const ghRepo = match[1];
+  const result = await runScript('gh', [
+    'run', 'list',
+    '--repo', ghRepo,
+    '--branch', 'main',
+    '--status', 'failure',
+    '--limit', '5',
+    '--json', 'databaseId,workflowName,conclusion,headBranch,url,headSha',
+  ], { timeout: 15_000 });
 
-  const proc = Bun.spawn(
-    [
-      'gh',
-      'run',
-      'list',
-      '--repo',
-      ghRepo,
-      '--branch',
-      'main',
-      '--status',
-      'failure',
-      '--limit',
-      '5',
-      '--json',
-      'databaseId,workflowName,conclusion,headBranch,url,headSha',
-    ],
-    { stdout: 'pipe', stderr: 'pipe' },
-  );
+  if (result.exitCode !== 0) return [];
+  return JSON.parse(result.stdout) as WorkflowRun[];
+}
 
-  const timer = setTimeout(() => proc.kill(), 15_000);
-  const stdout = await new Response(proc.stdout).text();
-  await proc.exited;
-  clearTimeout(timer);
-
-  return JSON.parse(stdout) as WorkflowRun[];
+function evictStaleEntries(map: Map<string, number>): void {
+  const now = Date.now();
+  for (const [key, ts] of map) {
+    if (now - ts > SEEN_TTL_MS) map.delete(key);
+  }
 }

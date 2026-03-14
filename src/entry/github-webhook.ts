@@ -2,6 +2,7 @@ import type { TaskCreateRequest, TriggerSource } from '../types.js';
 import { createLogger } from '../util/logger.js';
 
 const log = createLogger();
+const DEFAULT_BRANCH = 'main';
 
 // GitHub webhook event payloads (minimal shape we care about)
 
@@ -93,7 +94,7 @@ function handleWorkflowRun(event: WorkflowRunEvent, trigger: TriggerSource): Tas
   // Only act on completed, failed workflow runs on the default branch
   if (event.action !== 'completed') return null;
   if (event.workflow_run.conclusion !== 'failure') return null;
-  if (event.workflow_run.head_branch !== 'main') return null;
+  if (event.workflow_run.head_branch !== DEFAULT_BRANCH) return null;
 
   const repoFullName = event.workflow_run.repository.full_name;
   const repo = REPO_MAP[repoFullName];
@@ -125,7 +126,7 @@ function handleWorkflowRun(event: WorkflowRunEvent, trigger: TriggerSource): Tas
 function handleCheckSuite(event: CheckSuiteEvent, trigger: TriggerSource): TaskCreateRequest | null {
   if (event.action !== 'completed') return null;
   if (event.check_suite.conclusion !== 'failure') return null;
-  if (event.check_suite.head_branch !== 'main') return null;
+  if (event.check_suite.head_branch !== DEFAULT_BRANCH) return null;
 
   const repoFullName = event.repository.full_name;
   const repo = REPO_MAP[repoFullName];

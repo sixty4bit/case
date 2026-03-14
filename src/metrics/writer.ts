@@ -48,9 +48,8 @@ export async function writeRunMetrics(
   };
 
   await mkdir(dirname(logFile), { recursive: true });
-  const file = Bun.file(logFile);
-  const existing = (await file.exists()) ? await file.text() : '';
-  await Bun.write(file, existing + JSON.stringify(entry) + '\n');
+  const { appendFile } = await import('node:fs/promises');
+  await appendFile(logFile, JSON.stringify(entry) + '\n');
 
   log.info('run metrics written', { runId: metrics.runId, outcome: metrics.outcome });
 }

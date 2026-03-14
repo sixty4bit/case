@@ -5,8 +5,9 @@ import { createLogger } from '../../util/logger.js';
 
 const log = createLogger();
 
-/** Track repos we've already flagged stale docs for. */
-const flaggedRepos = new Set<string>();
+/** Track repos we've already flagged stale docs for (with TTL). */
+const flaggedRepos = new Map<string, number>();
+const FLAGGED_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Run entropy-scan.sh across repos and create cleanup tasks for stale docs.
@@ -22,6 +23,8 @@ export async function scanStaleDocs(caseRoot: string, repos: ProjectEntry[]): Pr
 
   const entropyScript = resolve(caseRoot, 'scripts/entropy-scan.sh');
 
+  evictStaleEntries(flaggedRepos);
+
   for (const repo of repos) {
     if (flaggedRepos.has(repo.name)) continue;
 
@@ -34,7 +37,7 @@ export async function scanStaleDocs(caseRoot: string, repos: ProjectEntry[]): Pr
 
       // entropy-scan.sh exits 0 if clean, non-zero if drift detected
       if (result.exitCode !== 0 && result.stdout.trim()) {
-        flaggedRepos.add(repo.name);
+        flaggedRepos.set(repo.name, Date.now());
 
         tasks.push({
           repo: repo.name,
@@ -64,4 +67,11 @@ export async function scanStaleDocs(caseRoot: string, repos: ProjectEntry[]): Pr
   }
 
   return tasks;
+}
+
+function evictStaleEntries(map: Map<string, number>): void {
+  const now = Date.now();
+  for (const [key, ts] of map) {
+    if (now - ts > FLAGGED_TTL_MS) map.delete(key);
+  }
 }

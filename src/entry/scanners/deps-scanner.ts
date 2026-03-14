@@ -1,11 +1,13 @@
 import { resolve } from 'node:path';
 import type { ProjectEntry, TaskCreateRequest, TriggerSource } from '../../types.js';
+import { runScript } from '../../util/run-script.js';
 import { createLogger } from '../../util/logger.js';
 
 const log = createLogger();
 
-/** Track repos we've already flagged outdated deps for. */
-const flaggedRepos = new Set<string>();
+/** Track repos we've already flagged outdated deps for (with TTL). */
+const flaggedRepos = new Map<string, number>();
+const FLAGGED_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 interface OutdatedPackage {
   name: string;
@@ -26,6 +28,8 @@ export async function scanOutdatedDeps(caseRoot: string, repos: ProjectEntry[]):
     runId: `deps-${Date.now().toString(36)}`,
   };
 
+  evictStaleEntries(flaggedRepos);
+
   for (const repo of repos) {
     if (flaggedRepos.has(repo.name)) continue;
 
@@ -43,7 +47,7 @@ export async function scanOutdatedDeps(caseRoot: string, repos: ProjectEntry[]):
 
       if (significant.length === 0) continue;
 
-      flaggedRepos.add(repo.name);
+      flaggedRepos.set(repo.name, Date.now());
 
       const depList = significant.map((p) => `- ${p.name}: ${p.current} → ${p.latest}`).join('\n');
 
@@ -72,24 +76,9 @@ export async function scanOutdatedDeps(caseRoot: string, repos: ProjectEntry[]):
 
 async function getOutdatedPackages(repoPath: string, packageManager: string): Promise<OutdatedPackage[]> {
   const cmd = packageManager === 'pnpm' ? 'pnpm' : 'npm';
-
-  try {
-    // pnpm/npm outdated exits non-zero when outdated packages exist
-    const proc = Bun.spawn([cmd, 'outdated', '--json'], {
-      cwd: repoPath,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-
-    const timer = setTimeout(() => proc.kill(), 30_000);
-    const stdout = await new Response(proc.stdout).text();
-    await proc.exited;
-    clearTimeout(timer);
-
-    return parseOutdatedOutput(stdout);
-  } catch {
-    return [];
-  }
+  // pnpm/npm outdated exits non-zero when outdated packages exist — that's expected
+  const result = await runScript(cmd, ['outdated', '--json'], { cwd: repoPath, timeout: 30_000 });
+  return parseOutdatedOutput(result.stdout);
 }
 
 function parseOutdatedOutput(stdout: string): OutdatedPackage[] {
@@ -105,5 +94,12 @@ function parseOutdatedOutput(stdout: string): OutdatedPackage[] {
     }));
   } catch {
     return [];
+  }
+}
+
+function evictStaleEntries(map: Map<string, number>): void {
+  const now = Date.now();
+  for (const [key, ts] of map) {
+    if (now - ts > FLAGGED_TTL_MS) map.delete(key);
   }
 }

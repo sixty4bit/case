@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { parseJsonLines } from '../util/parse-jsonl.js';
 import { createLogger } from '../util/logger.js';
 
 const log = createLogger();
@@ -6,10 +7,11 @@ const log = createLogger();
 interface ChangelogEntry {
   version: string;
   agent: string;
-  date: string;
+}
+
+interface RunLogEntry {
   task: string;
-  reason: string;
-  contentHash: string;
+  runId: string;
 }
 
 /**
@@ -17,53 +19,35 @@ interface ChangelogEntry {
  * Returns an empty record if no changelog exists or on parse errors.
  */
 export async function getCurrentPromptVersions(caseRoot: string): Promise<Record<string, string>> {
-  const changelogPath = resolve(caseRoot, 'docs/agent-versions/changelog.jsonl');
-  const file = Bun.file(changelogPath);
-
+  const file = Bun.file(resolve(caseRoot, 'docs/agent-versions/changelog.jsonl'));
   if (!(await file.exists())) return {};
 
-  const raw = await file.text();
-  const versions: Record<string, string> = {};
+  const entries = parseJsonLines<ChangelogEntry>(await file.text(), (line) => {
+    log.error('invalid changelog line', { line: line.slice(0, 100) });
+  });
 
-  for (const line of raw.split('\n')) {
-    if (!line.trim()) continue;
-    try {
-      const entry = JSON.parse(line) as ChangelogEntry;
-      if (entry.agent && entry.version) {
-        versions[entry.agent] = entry.version;
-      }
-    } catch {
-      log.error('invalid changelog line', { line: line.slice(0, 100) });
+  const versions: Record<string, string> = {};
+  for (const entry of entries) {
+    if (entry.agent && entry.version) {
+      versions[entry.agent] = entry.version;
     }
   }
-
   return versions;
 }
 
 /**
  * Find the most recent runId for a given task in the run log.
- * Used to link runs for the same task.
  */
 export async function findPriorRunId(caseRoot: string, taskId: string): Promise<string | null> {
-  const logPath = resolve(caseRoot, 'docs/run-log.jsonl');
-  const file = Bun.file(logPath);
-
+  const file = Bun.file(resolve(caseRoot, 'docs/run-log.jsonl'));
   if (!(await file.exists())) return null;
 
-  const raw = await file.text();
+  const entries = parseJsonLines<RunLogEntry>(await file.text());
   let priorRunId: string | null = null;
-
-  for (const line of raw.split('\n')) {
-    if (!line.trim()) continue;
-    try {
-      const entry = JSON.parse(line) as { task: string; runId: string };
-      if (entry.task === taskId) {
-        priorRunId = entry.runId;
-      }
-    } catch {
-      // skip malformed lines
+  for (const entry of entries) {
+    if (entry.task === taskId) {
+      priorRunId = entry.runId;
     }
   }
-
   return priorRunId;
 }
