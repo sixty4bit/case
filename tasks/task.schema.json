@@ -73,6 +73,11 @@
       "default": null,
       "description": "Pull request number"
     },
+    "fastTestCommand": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Fast test command targeting only changed files (e.g. 'pnpm vitest --related'). Run first during keep/discard; full suite only if this passes. If null, falls back to full test command from projects.json."
+    },
     "checkCommand": {
       "type": ["string", "null"],
       "default": null,

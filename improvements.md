@@ -20,7 +20,7 @@ Sources informing these improvements:
 
 ## Prioritized Execution Plan
 
-> **Last revised: 2026-03-14.** Original waves 1-3 are ~70% complete.
+> **Last revised: 2026-03-14.** Waves 1-3 complete.
 > Completed items moved to "Done" section. Remaining work regrouped into new waves.
 
 ### Completed (shipped as of 2026-03-14)
@@ -60,6 +60,11 @@ Items already implemented in the harness. Kept here for traceability.
 | **41** | Working memory (WORKING.md) | Implementer reads `{task-stem}.working.md` at setup, writes it at end (even on failure). Survives retries. |
 | **42** | Cross-run JSONL log | `scripts/log-run.sh` appends structured entry to `docs/run-log.jsonl` after each pipeline run. Called from SKILL.md Steps 8 and 9. |
 | **51** | Human review gate for retrospective | Retrospective proposes amendments to `docs/proposed-amendments/` instead of direct edits. Only repo learnings applied directly. |
+| **30** | Agent prompt versioning | `scripts/snapshot-agent.sh` creates snapshots + `docs/agent-versions/changelog.jsonl` tracks version, agent, date, task, reason, contentHash. Retrospective runs snapshot before proposing agent prompt changes. |
+| **54** | Prompt snapshots for one-step rollback | Snapshots stored as `docs/agent-versions/{agent}-{date}.md`. Changelog enables O(1) lookup of what changed and why. Rollback = copy snapshot back. |
+| **55** | Relational fields in run log | `log-run.sh` now emits `promptVersions` (from changelog), `priorRunId` (previous run for same task), `parentTaskId` (from contractPath for ideation tasks). |
+| **48** | Intelligent respawning | SKILL.md Step 4b: on implementer failure, `analyze-failure.sh` classifies error, checks working memory for prior attempts, generates targeted retry context. Max 1 intelligent retry per run. |
+| **56** | Two-tier test verification | Implementer runs `vitest --related` (changed files only) before full suite. `fastTestCommand` field in task schema. Fast failure = fix immediately, don't waste full suite. |
 
 ### Wave 1: Implementer effectiveness (prompt edits only) ✓ COMPLETE
 **Shipped 2026-03-14. All items implemented as prompt/template/schema changes.**
@@ -81,8 +86,8 @@ Items already implemented in the harness. Kept here for traceability.
 | **42** | Cross-run JSONL log | Task JSON captures per-task data but no timeline view across tasks. Append structured entry to `docs/run-log.jsonl` after each pipeline run. Foundation for Wave 3 self-improvement. |
 | **41** | Working memory (WORKING.md) | Learnings + task JSON exist but no per-task scratch state that survives retries. When implementer fails mid-run, next session starts cold. Add WORKING.md per active task with: current phase, last attempt, blockers, files changed. |
 
-### Wave 3: Self-improvement loop
-**Effort: 2-4 weeks. Depends on Wave 2 (#42) for run log data.**
+### Wave 3: Self-improvement loop ✓ COMPLETE
+**Shipped 2026-03-14. Prompt versioning, relational run log, intelligent respawning, two-tier testing.**
 
 | # | Item | Why now |
 |---|------|---------|

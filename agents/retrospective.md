@@ -84,6 +84,16 @@ For each finding, classify where the fix belongs:
 - **medium** — Would make agents faster or more reliable.
 - **low** — Nice to have, minor clarity improvement.
 
+**Before proposing agent prompt changes — snapshot first:**
+
+If any of your proposals target an agent prompt (`agents/*.md`), create a snapshot before proposing:
+```bash
+bash /Users/nicknisi/Developer/case/scripts/snapshot-agent.sh <agent-name> \
+  --task "<task-filename>" \
+  --reason "<1-line: what metric or failure motivated this change>"
+```
+This preserves the current version for one-step rollback and feeds the prompt versioning system. Do this once per agent you're proposing changes to — not once per proposal.
+
 **How to propose:**
 
 For each finding, create a proposal file in `/Users/nicknisi/Developer/case/docs/proposed-amendments/`:
@@ -95,6 +105,7 @@ For each finding, create a proposal file in `/Users/nicknisi/Developer/case/docs
 **Target file:** {path relative to case/}
 **Triggered by:** {task filename} — {brief description of what happened}
 **Metrics motivation:** {what measurement or observation led to this}
+**Prompt version:** {version tag from snapshot-agent.sh, if target is agents/*.md — otherwise omit}
 
 ## Current behavior
 

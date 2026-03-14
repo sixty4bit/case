@@ -195,8 +195,46 @@ _(Already done in the Arguments section above)_
    - **subagent_type**: `general-purpose`
 3. Wait for completion
 4. Parse `AGENT_RESULT` from response
-5. If `status == "failed"`: report error to user via `AskUserQuestion`. **Go to step 9 (Retrospective)** with outcome "failed" and failed agent "implementer".
+5. If `status == "failed"`: **attempt intelligent respawn** (step 4b) before surfacing to user.
 6. If `status == "completed"`: continue to step 5
+
+### Step 4b: Intelligent Respawn (on implementer failure)
+
+One targeted retry is worth more than three identical retries. Analyze the failure and retry once with adjusted context before surfacing to the user.
+
+1. Run failure analysis:
+   ```bash
+   ANALYSIS=$(bash /Users/nicknisi/Developer/case/scripts/analyze-failure.sh <task.json> implementer "<error from AGENT_RESULT>")
+   echo "$ANALYSIS"
+   ```
+2. Parse the JSON output. Check `retryViable`:
+   - If `false` → skip retry, go to step 4c (surface to user)
+   - If `true` → continue with retry
+3. Respawn the implementer with adjusted context. Prepend this to the original prompt:
+   ```
+   ## RETRY CONTEXT — Previous attempt failed
+
+   **Failure class:** {failureClass}
+   **Error:** {errorSummary}
+   **What was already tried:** {whatWasTried — list items}
+   **Suggested focus:** {suggestedFocus}
+
+   Do NOT repeat the previous approach. Read your working memory ({task-stem}.working.md)
+   for details on what was tried. Focus on the suggested approach above.
+   ```
+   Use the `Agent` tool with the adjusted prompt. Same subagent_type.
+4. Parse the retry's `AGENT_RESULT`:
+   - If `status == "completed"` → continue to step 5 (Verifier)
+   - If `status == "failed"` → go to step 4c (surface to user)
+
+**Rule: maximum 1 intelligent retry per pipeline run.** Do not retry again after the retry fails.
+
+### Step 4c: Surface Implementer Failure to User
+
+Report the failure to user via `AskUserQuestion`:
+- Include both the original error and the retry result (if retry was attempted)
+- Options: "Re-run with guidance" | "Abort"
+- If "Abort": **go to step 9 (Retrospective)** with outcome "failed" and failed agent "implementer".
 
 ### Step 5: Spawn Verifier
 

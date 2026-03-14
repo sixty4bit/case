@@ -90,30 +90,58 @@ Raw output (hundreds of lines of test results, compilation steps, lint passes) w
 
 After each implementation attempt, measure whether you made progress:
 
-1. If the task has a `checkCommand`, run it:
+1. **Run fast tests first** (two-tier verification). If the task has a `fastTestCommand`, use it:
+   ```bash
+   FAST_CMD=$(jq -r '.fastTestCommand // empty' <task.json>)
+   if [[ -n "$FAST_CMD" ]]; then
+     eval "$FAST_CMD" > /tmp/fast-test.log 2>&1 || { echo "FAST TESTS FAILED:"; tail -10 /tmp/fast-test.log; }
+   fi
+   ```
+   If no `fastTestCommand`, try `vitest --related` with the changed files as a fast check:
+   ```bash
+   CHANGED=$(git diff --name-only HEAD~1 -- 'src/' | tr '\n' ' ')
+   if [[ -n "$CHANGED" ]]; then
+     pnpm vitest --related $CHANGED --run > /tmp/fast-test.log 2>&1 || { echo "RELATED TESTS FAILED:"; tail -10 /tmp/fast-test.log; }
+   fi
+   ```
+   **If fast tests fail → fix or discard immediately.** Don't waste time running the full suite.
+
+2. If the task has a `checkCommand`, run it:
    ```bash
    CURRENT=$(eval "$(jq -r '.checkCommand' <task.json>)" 2>/dev/null)
    echo "Baseline: $BASELINE → Current: $CURRENT"
    ```
-2. If `CURRENT` moved toward `checkTarget` (or tests went from failing to passing) → **keep** the commit
-3. If `CURRENT` stayed the same or regressed → **discard** and try a different approach:
+3. If `CURRENT` moved toward `checkTarget` (or tests went from failing to passing) → **keep** the commit
+4. If `CURRENT` stayed the same or regressed → **discard** and try a different approach:
    ```bash
    git reset --hard HEAD~1
    ```
    Log the failed attempt in your working notes: "Tried X, didn't work because Y"
-4. Even without `checkCommand`, apply the same binary logic: run tests, compare pass count to your last known state. If you introduced new failures, revert rather than fix forward.
+5. Even without `checkCommand`, apply the same binary logic: run tests, compare pass count to your last known state. If you introduced new failures, revert rather than fix forward.
 
 **Reverting a failed attempt is not a failure — it's data.** Each revert tells you what doesn't work without accumulating technical debt from half-working fixes.
 
 ### 3. Validate
 
-Run all available automated checks from the repo's `projects.json` commands. **Redirect output** — only surface failures:
+Run automated checks in two tiers. **Redirect output** — only surface failures:
 
+**Tier 1 — fast feedback (<30 sec):** Run tests for changed files only, plus typecheck and lint. Catch 80% of issues instantly.
 ```bash
-# Run each check, redirect output, surface only failures
-pnpm test > /tmp/test.log 2>&1 || { echo "TESTS FAILED:"; tail -20 /tmp/test.log; }
+# Fast test subset (changed files only)
+CHANGED=$(git diff --name-only main -- 'src/' | tr '\n' ' ')
+if [[ -n "$CHANGED" ]]; then
+  pnpm vitest --related $CHANGED --run > /tmp/fast-test.log 2>&1 || { echo "RELATED TESTS FAILED:"; tail -20 /tmp/fast-test.log; }
+fi
+
+# Typecheck and lint (fast, catch most issues)
 pnpm typecheck > /tmp/tsc.log 2>&1 || { echo "TYPECHECK FAILED:"; tail -20 /tmp/tsc.log; }
 pnpm lint > /tmp/lint.log 2>&1 || { echo "LINT FAILED:"; tail -20 /tmp/lint.log; }
+```
+**If Tier 1 fails, fix before proceeding.** Don't run the full suite on code that won't pass fast checks.
+
+**Tier 2 — full suite (only if Tier 1 passes):**
+```bash
+pnpm test > /tmp/test.log 2>&1 || { echo "TESTS FAILED:"; tail -20 /tmp/test.log; }
 pnpm format > /tmp/format.log 2>&1 || { echo "FORMAT FAILED:"; tail -20 /tmp/format.log; }
 pnpm build > /tmp/build.log 2>&1 || { echo "BUILD FAILED:"; tail -20 /tmp/build.log; }
 ```

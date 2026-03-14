@@ -29,8 +29,9 @@ fi
 
 CASE_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LOG_FILE="$CASE_ROOT/docs/run-log.jsonl"
+CHANGELOG="$CASE_ROOT/docs/agent-versions/changelog.jsonl"
 
-TS_FILE="$TASK_FILE" TS_OUTCOME="$OUTCOME" TS_FAILED="$FAILED_AGENT" TS_LOG="$LOG_FILE" python3 -c "
+TS_FILE="$TASK_FILE" TS_OUTCOME="$OUTCOME" TS_FAILED="$FAILED_AGENT" TS_LOG="$LOG_FILE" TS_CHANGELOG="$CHANGELOG" python3 -c "
 import json, os, sys, uuid
 from datetime import datetime, timezone
 
@@ -38,6 +39,7 @@ task_file = os.environ['TS_FILE']
 outcome = os.environ['TS_OUTCOME']
 failed_agent = os.environ.get('TS_FAILED', '') or None
 log_file = os.environ['TS_LOG']
+changelog_file = os.environ['TS_CHANGELOG']
 
 with open(task_file) as f:
     data = json.load(f)
@@ -68,14 +70,55 @@ if started and last_completed:
     except (ValueError, TypeError):
         pass
 
+# --- Relational fields ---
+
+# promptVersions: latest version tag per agent from changelog.jsonl
+prompt_versions = {}
+if os.path.isfile(changelog_file):
+    try:
+        with open(changelog_file) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                cl = json.loads(line)
+                agent = cl.get('agent')
+                version = cl.get('version')
+                if agent and version:
+                    prompt_versions[agent] = version
+    except (json.JSONDecodeError, IOError):
+        pass
+
+# priorRunId: find the most recent run for the same task in the log
+task_id = data.get('id', 'unknown')
+prior_run_id = None
+if os.path.isfile(log_file):
+    try:
+        with open(log_file) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                prev = json.loads(line)
+                if prev.get('task') == task_id:
+                    prior_run_id = prev.get('runId')
+    except (json.JSONDecodeError, IOError):
+        pass
+
+# parentTaskId: from contractPath (ideation tasks link to their contract)
+parent_task_id = data.get('contractPath') or None
+
 entry = {
     'runId': str(uuid.uuid4()),
     'date': datetime.now(timezone.utc).strftime('%Y-%m-%d'),
-    'task': data.get('id', 'unknown'),
+    'task': task_id,
     'repo': data.get('repo', 'unknown'),
     'outcome': outcome,
     'failedAgent': failed_agent,
     'phases': phases,
+    'promptVersions': prompt_versions or None,
+    'priorRunId': prior_run_id,
+    'parentTaskId': parent_task_id,
     'metrics': {
         'tested': data.get('tested', False),
         'manualTested': data.get('manualTested', False),
