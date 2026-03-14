@@ -97,17 +97,17 @@ Items already implemented in the harness. Kept here for traceability.
 | **48** | Intelligent respawning | Doom-loop currently blocks but doesn't analyze/adjust. On failure: capture what failed, generate adjusted prompt, retry once with targeted fix. One intelligent retry > three identical retries. |
 | **56** | Two-tier test verification | Fast subset (changed-file tests via `vitest --related`) first, full suite only if subset passes. Reduces context waste and tightens the implementer feedback loop. |
 
-### Wave 4: Programmatic orchestrator
-**Effort: 4-8 weeks. Depends on Waves 2-3 (#42, #30) for structured data. Architectural shift from #40.**
+### Wave 4: Programmatic orchestrator ✅
+**Completed 2026-03-14.** TypeScript orchestrator replaces SKILL.md Steps 4-9 with deterministic while/switch loop.
 
-| # | Item | Why now |
-|---|------|---------|
-| **40** | Hybrid orchestration (phases 1-3) | SKILL.md flow → TypeScript orchestrator. Deterministic if/else, real retry caps, structured result collection. Pipeline flow control as code, not LLM-interpreted prose. |
-| **46** | Attended vs unattended modes | Design both. Bug fixes → unattended. Refactors → attended. Task template field. Currently only attended mode exists. |
-| **15** | Deterministic context prefetching | Orchestrator assembles context before spawning each agent. session-start.sh is a step toward this but context assembly isn't yet fully deterministic. |
+| # | Item | Status |
+|---|------|--------|
+| **40** | Hybrid orchestration (phases 1-3) | ✅ `src/pipeline.ts` — while/switch loop, phase modules, AGENT_RESULT parsing, re-entry via `determineEntryPhase()` |
+| **46** | Attended vs unattended modes | ✅ `src/notify.ts` — readline prompts (attended) vs auto-abort (unattended). Task schema `mode` field added. |
+| **15** | Deterministic context prefetching | ✅ `src/context/prefetch.ts` + `assembler.ts` — parallel fetching, role-specific context assembly (implementer gets learnings, verifier gets minimal, closer gets prior AGENT_RESULTs) |
 
 ### Wave 5: Scale and automate
-**Effort: ongoing. Depends on Wave 4 orchestrator being operational.**
+**Effort: ongoing. Wave 4 orchestrator is now operational — these items are unblocked.**
 
 | # | Item | Why now |
 |---|------|---------|

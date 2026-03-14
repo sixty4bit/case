@@ -4,3 +4,7 @@
 .case-manual-tested
 .case-reviewed
 .case-doom-loop-state
+
+# Build artifacts
+node_modules/
+dist/

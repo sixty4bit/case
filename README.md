@@ -24,27 +24,33 @@ graph TD
     G --> H["echo task-id > .case-active"]
     H --> I["Baseline smoke test"]
     I -->|FAIL| RETRO["Retrospective"]
-    I -->|PASS| J["Spawn Implementer"]
+    I -->|PASS| ORCH["Programmatic Orchestrator"]
 
-    J --> K{"Implementer result"}
-    K -->|failed| RETRO
-    K -->|completed| L["Spawn Verifier"]
+    ORCH --> J["Implement"]
+    J --> K{"Result"}
+    K -->|failed + retryViable| J2["Retry with failure analysis"]
+    J2 -->|failed| RETRO
+    J2 -->|completed| L["Verify"]
+    K -->|completed| L
+    K -->|failed + !retryViable| RETRO
 
-    L --> M{"Verifier result"}
+    L --> M{"Result"}
     M -->|failed| RETRO
-    M -->|completed| N["Spawn Reviewer"]
+    M -->|completed| N["Review"]
 
-    N --> O{"Reviewer result"}
+    N --> O{"Result"}
     O -->|critical findings| RETRO
-    O -->|passed| P["Spawn Closer"]
+    O -->|passed| P["Close"]
 
-    P --> Q{"Closer result"}
+    P --> Q{"Result"}
     Q -->|failed| RETRO
     Q -->|completed| R["PR opened"]
 
     R --> RETRO
-    RETRO --> S["Apply harness improvements + update learnings"]
+    RETRO --> S["Propose amendments + update learnings"]
 ```
+
+Steps 0-3 (issue parsing, task creation, branch setup) are handled by the LLM orchestrator. Steps 4-9 (implement through retrospective) are handled by the **programmatic orchestrator** — a TypeScript `while`/`switch` loop that makes phase transitions deterministic rather than LLM-interpreted.
 
 ### The Agents
 
@@ -56,6 +62,70 @@ graph TD
 | **Reviewer** | Review diff against golden principles, classify findings, gate PR creation | Edit code, commit, run tests |
 | **Closer** | Create PR with thorough description, satisfy hooks, post review comments | Edit code, run tests |
 | **Retrospective** | Analyze the run, apply harness improvements directly, maintain per-repo learnings | Edit target repo code |
+
+## Programmatic Orchestrator
+
+The pipeline's flow control (Steps 4-9) runs as a TypeScript program rather than LLM-interpreted prose. The LLM still does the work *inside* each phase (writing code, testing, reviewing), but the transitions *between* phases are deterministic `if/else` branches.
+
+| Concern | Before (prose in SKILL.md) | After (TypeScript orchestrator) |
+|---|---|---|
+| Phase transitions | LLM reads a table and decides | `switch(currentPhase)` returns `nextPhase` |
+| Retry cap | Doom-loop hook fires after 3 identical failures | `maxRetries: 1` checked before spawning |
+| Resume after interrupt | LLM reads status table, hopefully picks the right step | `determineEntryPhase(task)` returns the correct phase |
+| Context per agent | LLM decides what to include | `assemblePrompt()` gives each role only what it needs |
+| Attended vs unattended | Not supported | `--mode unattended` auto-aborts on failure |
+
+### Usage
+
+```bash
+# Dry run — logs phase transitions without spawning agents
+npx tsx src/index.ts --task tasks/active/cli-1-issue-53.task.json --dry-run
+
+# Full pipeline, attended (prompts human on failure)
+npx tsx src/index.ts --task tasks/active/cli-1-issue-53.task.json
+
+# Full pipeline, unattended (auto-aborts on failure)
+npx tsx src/index.ts --task tasks/active/cli-1-issue-53.task.json --mode unattended
+```
+
+The `/case` skill dispatches to the orchestrator automatically after Step 3 (branch + baseline). You can also invoke it directly for existing task files.
+
+### Architecture
+
+```
+src/
+  index.ts              CLI entry point (--task, --mode, --dry-run)
+  pipeline.ts           Core while/switch loop (replaces SKILL.md Steps 4-9)
+  notify.ts             Attended (readline) vs unattended (auto-abort) notifier
+  agent-runner.ts       Spawns Claude Code via SDK, parses AGENT_RESULT
+  config.ts             Loads projects.json, resolves paths, builds config
+  types.ts              TaskJson, AgentResult, PipelineConfig, etc.
+  state/
+    task-store.ts       Reads JSON directly, writes through task-status.sh
+    transitions.ts      Deterministic re-entry from any task state
+  context/
+    prefetch.ts         Parallel repo context gathering (session, learnings, commits)
+    assembler.ts        Role-specific prompt assembly per agent
+  phases/
+    implement.ts        Spawn implementer + intelligent retry (max 1)
+    verify.ts           Spawn verifier (no retries — needs human judgment)
+    review.ts           Spawn reviewer, check for critical findings
+    close.ts            Spawn closer, extract PR URL
+    retrospective.ts    Spawn retrospective in background (fire-and-forget)
+  util/
+    parse-agent-result.ts  Extract AGENT_RESULT JSON from agent output
+    run-script.ts          Safe execFile wrapper (no shell injection)
+    logger.ts              Structured JSON-lines to stderr
+```
+
+### Context Isolation
+
+Each agent receives only what it needs — not everything:
+
+- **Implementer**: task + issue + playbook + working memory + repo learnings + check fields
+- **Verifier**: task + repo path (deliberately minimal — fresh-context testing)
+- **Reviewer**: task + repo path (reads golden principles itself)
+- **Closer**: task + repo + verifier AGENT_RESULT + reviewer AGENT_RESULT
 
 ## Self-Improvement
 
@@ -222,6 +292,14 @@ hooks/
   pre-commit-check.sh               Enforce conventional commits
   post-pr-cleanup.sh                Update task JSON status, clean markers
   doom-loop-detect.sh               Detect repeated identical failures, break retry loops
+src/                                Programmatic orchestrator (TypeScript)
+  index.ts                          CLI entry point
+  pipeline.ts                       Core while/switch loop (Steps 4-9)
+  agent-runner.ts                   Spawn Claude Code via SDK, parse AGENT_RESULT
+  phases/                           One module per pipeline phase
+  context/                          Role-specific prompt assembly
+  state/                            Task store + re-entry logic
+  util/                             Parser, script runner, logger
 
 AGENTS.md                           Entry point for agents (project landscape)
 CLAUDE.md                           How to improve case itself

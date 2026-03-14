@@ -182,6 +182,24 @@ _(Already done in the Arguments section above)_
    bash /Users/nicknisi/Developer/case/scripts/task-status.sh <task.json> agent orchestrator completed now
    ```
 
+### Step 3b. Dispatch to Orchestrator
+
+Run the TypeScript orchestrator for the remainder of the pipeline (Steps 4-9):
+
+```bash
+npx tsx /Users/nicknisi/Developer/case/src/index.ts --task <task.json path> --mode attended
+```
+
+The orchestrator handles Steps 4-9 deterministically via a while/switch loop. If it exits with code 0, the pipeline is complete. If it exits with code 1, check the task JSON and run log for failure details.
+
+**When to use this vs the manual steps below:**
+- **Prefer the orchestrator** — it provides deterministic flow control, hard-capped retries, and role-specific context assembly.
+- **Fall back to manual steps** — if the orchestrator is unavailable or you need fine-grained control (e.g., debugging a specific phase).
+
+The manual Steps 4-9 below remain as documentation and fallback.
+
+---
+
 ### Step 4: Spawn Implementer
 
 1. Read `/Users/nicknisi/Developer/case/agents/implementer.md`

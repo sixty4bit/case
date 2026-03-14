@@ -192,7 +192,7 @@ if field in readonly:
     print(f'Error: field \"{field}\" is read-only', file=sys.stderr)
     sys.exit(1)
 
-known = ('prUrl', 'prNumber', 'tested', 'manualTested', 'issue', 'issueType', 'branch', 'contractPath', 'checkCommand', 'checkBaseline', 'checkTarget')
+known = ('prUrl', 'prNumber', 'tested', 'manualTested', 'issue', 'issueType', 'branch', 'contractPath', 'checkCommand', 'checkBaseline', 'checkTarget', 'mode')
 if field not in data and field not in known:
     print(f'Error: unknown field \"{field}\"', file=sys.stderr)
     sys.exit(1)
