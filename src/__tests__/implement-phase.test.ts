@@ -1,20 +1,13 @@
 import { describe, it, expect, mock, beforeEach, afterAll } from 'bun:test';
+import { mockSpawnAgent, mockRunScript } from './mocks.js';
 import type { AgentName, AgentResult, PipelineConfig } from '../types.js';
 import { writeFile, mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-// Only mock agent-runner and run-script — let assembler and prefetch use real code.
-// This avoids mock.module conflicts with assembler.test.ts.
-const mockSpawnAgent = mock();
-const mockRunScript = mock();
-
-mock.module('../agent-runner.js', () => ({ spawnAgent: mockSpawnAgent }));
-mock.module('../util/run-script.js', () => ({ runScript: mockRunScript }));
-
+// Import the REAL implement phase (no mock.module for phases)
 const { runImplementPhase } = await import('../phases/implement.js');
 
-// Temp directory for real agent templates (assembler reads these via real readFile)
 const tempCaseRoot = join(tmpdir(), `case-impl-test-${Date.now()}`);
 
 async function setupTempFiles() {
@@ -96,7 +89,7 @@ describe('runImplementPhase', () => {
 
     await setupTempFiles();
 
-    // Mock runScript for session-start.sh and git log (called by prefetch)
+    // Default: runScript returns empty JSON (for session-start.sh, git log)
     mockRunScript.mockResolvedValue({ stdout: '{}', stderr: '', exitCode: 0 });
   });
 
@@ -126,11 +119,10 @@ describe('runImplementPhase', () => {
       .mockResolvedValueOnce({ raw: '', result: failedResult, durationMs: 1000 })
       .mockResolvedValueOnce({ raw: '', result: completedResult, durationMs: 1000 });
 
-    // analyze-failure.sh response
     mockRunScript
       .mockResolvedValueOnce({ stdout: '{}', stderr: '', exitCode: 0 }) // session-start
-      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 })  // git log
-      .mockResolvedValueOnce({
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 })   // git log
+      .mockResolvedValueOnce({                                           // analyze-failure
         stdout: JSON.stringify({
           failureClass: 'test-failure',
           failedAgent: 'implementer',
@@ -159,8 +151,8 @@ describe('runImplementPhase', () => {
     mockSpawnAgent.mockResolvedValue({ raw: '', result: failedResult, durationMs: 1000 });
 
     mockRunScript
-      .mockResolvedValueOnce({ stdout: '{}', stderr: '', exitCode: 0 }) // session-start
-      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 })  // git log
+      .mockResolvedValueOnce({ stdout: '{}', stderr: '', exitCode: 0 })
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 })
       .mockResolvedValueOnce({
         stdout: JSON.stringify({
           failureClass: 'unknown',
@@ -189,8 +181,8 @@ describe('runImplementPhase', () => {
       .mockResolvedValueOnce({ raw: '', result: failedResult, durationMs: 1000 });
 
     mockRunScript
-      .mockResolvedValueOnce({ stdout: '{}', stderr: '', exitCode: 0 }) // session-start
-      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 })  // git log
+      .mockResolvedValueOnce({ stdout: '{}', stderr: '', exitCode: 0 })
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 })
       .mockResolvedValueOnce({
         stdout: JSON.stringify({
           failureClass: 'test-failure',

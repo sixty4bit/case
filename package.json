@@ -12,7 +12,7 @@
     "lint": "oxlint",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "test": "for f in src/__tests__/*.test.ts; do bun test \"$f\" || exit 1; done",
+    "test": "bun test",
     "start": "bun src/index.ts",
     "serve": "bun src/index.ts serve"
   },

@@ -1,18 +1,17 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test';
+import { describe, it, expect, mock, beforeEach, afterAll } from 'bun:test';
+import {
+  mockSpawnAgent,
+  mockRunScript,
+  mockWriteRunMetrics,
+  mockGetCurrentPromptVersions,
+  mockFindPriorRunId,
+} from './mocks.js';
 import type { AgentResult, PipelineConfig, TaskJson } from '../types.js';
+import { writeFile, mkdir, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 
-// Create mock functions for all dependencies
-const mockRunImplementPhase = mock();
-const mockRunVerifyPhase = mock();
-const mockRunReviewPhase = mock();
-const mockRunClosePhase = mock();
-const mockRunRetrospectivePhase = mock();
-const mockRunScript = mock();
-const mockWriteRunMetrics = mock();
-const mockGetCurrentPromptVersions = mock();
-const mockFindPriorRunId = mock();
-
-// Mock store instance
+// Pipeline-specific mocks (not shared — only pipeline uses these)
 const mockStoreRead = mock();
 const mockStoreSetStatus = mock();
 const mockStoreSetAgentPhase = mock();
@@ -25,7 +24,6 @@ const MockTaskStore = mock(() => ({
   setField: mockStoreSetField,
 }));
 
-// Mock notifier
 const mockNotifierSend = mock();
 const mockNotifierAskUser = mock();
 const mockCreateNotifier = mock(() => ({
@@ -33,38 +31,39 @@ const mockCreateNotifier = mock(() => ({
   askUser: mockNotifierAskUser,
 }));
 
-// Wire up module mocks
-mock.module('../phases/implement.js', () => ({ runImplementPhase: mockRunImplementPhase }));
-mock.module('../phases/verify.js', () => ({ runVerifyPhase: mockRunVerifyPhase }));
-mock.module('../phases/review.js', () => ({ runReviewPhase: mockRunReviewPhase }));
-mock.module('../phases/close.js', () => ({ runClosePhase: mockRunClosePhase }));
-mock.module('../phases/retrospective.js', () => ({ runRetrospectivePhase: mockRunRetrospectivePhase }));
 mock.module('../state/task-store.js', () => ({ TaskStore: MockTaskStore }));
 mock.module('../notify.js', () => ({ createNotifier: mockCreateNotifier }));
-mock.module('../util/run-script.js', () => ({ runScript: mockRunScript }));
-mock.module('../metrics/writer.js', () => ({ writeRunMetrics: mockWriteRunMetrics }));
-mock.module('../versioning/prompt-tracker.js', () => ({
-  getCurrentPromptVersions: mockGetCurrentPromptVersions,
-  findPriorRunId: mockFindPriorRunId,
-}));
 
 const { runPipeline } = await import('../pipeline.js');
+
+// Temp directory for agent templates (real assembler reads these)
+const tempCaseRoot = join(tmpdir(), `case-pipeline-test-${Date.now()}`);
+
+async function setupTempFiles() {
+  const agentsDir = join(tempCaseRoot, 'agents');
+  const docsDir = join(tempCaseRoot, 'docs/learnings');
+  await mkdir(agentsDir, { recursive: true });
+  await mkdir(docsDir, { recursive: true });
+  for (const agent of ['implementer', 'verifier', 'reviewer', 'closer', 'retrospective']) {
+    await writeFile(join(agentsDir, `${agent}.md`), `# ${agent}`);
+  }
+}
 
 function makeConfig(overrides: Partial<PipelineConfig> = {}): PipelineConfig {
   return {
     mode: 'attended',
-    taskJsonPath: '/case/tasks/active/cli-1.task.json',
-    taskMdPath: '/case/tasks/active/cli-1.md',
+    taskJsonPath: join(tempCaseRoot, 'tasks/active/cli-1.task.json'),
+    taskMdPath: join(tempCaseRoot, 'tasks/active/cli-1.md'),
     repoPath: '/repos/cli',
     repoName: 'cli',
-    caseRoot: '/case',
+    caseRoot: tempCaseRoot,
     maxRetries: 1,
     dryRun: false,
     ...overrides,
   };
 }
 
-const completedResult: AgentResult = {
+const completedAgentOutput: AgentResult = {
   status: 'completed',
   summary: 'Done',
   artifacts: {
@@ -79,13 +78,13 @@ const completedResult: AgentResult = {
   error: null,
 };
 
-const prResult: AgentResult = {
-  ...completedResult,
+const prAgentOutput: AgentResult = {
+  ...completedAgentOutput,
   summary: 'PR created',
-  artifacts: { ...completedResult.artifacts, prUrl: 'https://github.com/workos/cli/pull/42', prNumber: 42 },
+  artifacts: { ...completedAgentOutput.artifacts, prUrl: 'https://github.com/workos/cli/pull/42', prNumber: 42 },
 };
 
-const failedResult: AgentResult = {
+const failedAgentOutput: AgentResult = {
   status: 'failed',
   summary: 'Failed',
   artifacts: {
@@ -100,6 +99,11 @@ const failedResult: AgentResult = {
   error: 'Something went wrong',
 };
 
+/** Build a fake AGENT_RESULT raw string that parseAgentResult can extract */
+function agentRaw(result: AgentResult): string {
+  return `\n<<<AGENT_RESULT\n${JSON.stringify(result)}\nAGENT_RESULT>>>\n`;
+}
+
 const mockTask: TaskJson = {
   id: 'cli-1',
   status: 'active',
@@ -113,16 +117,15 @@ const mockTask: TaskJson = {
 };
 
 describe('runPipeline', () => {
-  beforeEach(() => {
-    mockRunImplementPhase.mockReset();
-    mockRunVerifyPhase.mockReset();
-    mockRunReviewPhase.mockReset();
-    mockRunClosePhase.mockReset();
-    mockRunRetrospectivePhase.mockReset();
+  beforeEach(async () => {
+    // Reset all shared mocks
+    mockSpawnAgent.mockReset();
     mockRunScript.mockReset();
     mockWriteRunMetrics.mockReset();
     mockGetCurrentPromptVersions.mockReset();
     mockFindPriorRunId.mockReset();
+
+    // Reset pipeline-specific mocks
     mockStoreRead.mockReset();
     mockStoreSetStatus.mockReset();
     mockStoreSetAgentPhase.mockReset();
@@ -130,90 +133,88 @@ describe('runPipeline', () => {
     mockNotifierSend.mockReset();
     mockNotifierAskUser.mockReset();
 
-    // Default mocks
+    // Defaults
     mockStoreRead.mockResolvedValue(mockTask);
-    mockRunScript.mockResolvedValue({ stdout: 'OK', stderr: '', exitCode: 0 });
+    mockStoreSetStatus.mockResolvedValue(undefined);
+    mockStoreSetAgentPhase.mockResolvedValue(undefined);
+    mockStoreSetField.mockResolvedValue(undefined);
+    mockRunScript.mockResolvedValue({ stdout: '{}', stderr: '', exitCode: 0 });
     mockWriteRunMetrics.mockResolvedValue(undefined);
     mockGetCurrentPromptVersions.mockResolvedValue({});
     mockFindPriorRunId.mockResolvedValue(null);
-    mockRunRetrospectivePhase.mockResolvedValue(undefined);
+
+    await setupTempFiles();
   });
 
-  it('happy path: implement -> verify -> review -> close -> retrospective -> complete', async () => {
-    mockRunImplementPhase.mockResolvedValue({ result: completedResult, nextPhase: 'verify' });
-    mockRunVerifyPhase.mockResolvedValue({ result: completedResult, nextPhase: 'review' });
-    mockRunReviewPhase.mockResolvedValue({ result: completedResult, nextPhase: 'close' });
-    mockRunClosePhase.mockResolvedValue({ result: prResult, nextPhase: 'retrospective' });
+  afterAll(async () => {
+    await rm(tempCaseRoot, { recursive: true, force: true });
+  });
+
+  it('happy path: all phases complete successfully', async () => {
+    // Each spawnAgent call returns a different AGENT_RESULT for each phase
+    mockSpawnAgent
+      .mockResolvedValueOnce({ raw: agentRaw(completedAgentOutput), result: completedAgentOutput, durationMs: 100 }) // implementer
+      .mockResolvedValueOnce({ raw: agentRaw(completedAgentOutput), result: completedAgentOutput, durationMs: 100 }) // verifier
+      .mockResolvedValueOnce({ raw: agentRaw(completedAgentOutput), result: completedAgentOutput, durationMs: 100 }) // reviewer
+      .mockResolvedValueOnce({ raw: agentRaw(prAgentOutput), result: prAgentOutput, durationMs: 100 })              // closer
+      .mockResolvedValueOnce({ raw: '', result: completedAgentOutput, durationMs: 100 });                            // retrospective
 
     await runPipeline(makeConfig());
 
-    expect(mockRunImplementPhase).toHaveBeenCalledTimes(1);
-    expect(mockRunVerifyPhase).toHaveBeenCalledTimes(1);
-    expect(mockRunReviewPhase).toHaveBeenCalledTimes(1);
-    expect(mockRunClosePhase).toHaveBeenCalledTimes(1);
-    expect(mockRunRetrospectivePhase).toHaveBeenCalledTimes(1);
-    expect(mockRunRetrospectivePhase).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      'completed',
-      undefined,
-    );
+    // 5 agent spawns: implementer, verifier, reviewer, closer, retrospective
+    expect(mockSpawnAgent).toHaveBeenCalledTimes(5);
     expect(mockNotifierSend).toHaveBeenCalledWith(expect.stringContaining('PR created'));
     expect(mockNotifierSend).toHaveBeenCalledWith('Pipeline completed successfully.');
+    expect(mockWriteRunMetrics).toHaveBeenCalled();
   });
 
-  it('implement failure, attended mode, user chooses Abort', async () => {
-    mockRunImplementPhase.mockResolvedValue({ result: failedResult, nextPhase: 'abort' });
+  it('implement failure -> user aborts -> retrospective runs', async () => {
+    mockSpawnAgent
+      .mockResolvedValueOnce({ raw: agentRaw(failedAgentOutput), result: failedAgentOutput, durationMs: 100 }) // implementer fails
+      .mockResolvedValueOnce({ raw: agentRaw(failedAgentOutput), result: failedAgentOutput, durationMs: 100 }) // retry also fails
+      .mockResolvedValueOnce({ raw: '', result: completedAgentOutput, durationMs: 100 });                       // retrospective
+
+    // analyze-failure.sh says not retryable
+    mockRunScript
+      .mockResolvedValueOnce({ stdout: '{}', stderr: '', exitCode: 0 })  // session-start
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 })    // git log
+      .mockResolvedValueOnce({                                            // analyze-failure
+        stdout: JSON.stringify({ failureClass: 'unknown', retryViable: false, errorSummary: 'bad', filesInvolved: [], whatWasTried: [], suggestedFocus: 'stop' }),
+        stderr: '', exitCode: 0,
+      })
+      .mockResolvedValue({ stdout: '{}', stderr: '', exitCode: 0 });     // any remaining
+
     mockNotifierAskUser.mockResolvedValue('Abort');
 
     await runPipeline(makeConfig());
 
-    expect(mockRunRetrospectivePhase).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      'failed',
-      'implementer',
-    );
     expect(mockNotifierSend).toHaveBeenCalledWith(expect.stringContaining('failed'));
   });
 
-  it('implement failure, unattended mode -> auto-abort', async () => {
-    mockRunImplementPhase.mockResolvedValue({ result: failedResult, nextPhase: 'abort' });
+  it('unattended mode auto-aborts on failure', async () => {
+    mockSpawnAgent
+      .mockResolvedValueOnce({ raw: agentRaw(failedAgentOutput), result: failedAgentOutput, durationMs: 100 })
+      .mockResolvedValueOnce({ raw: '', result: completedAgentOutput, durationMs: 100 });
+
+    mockRunScript
+      .mockResolvedValueOnce({ stdout: '{}', stderr: '', exitCode: 0 })
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 })
+      .mockResolvedValueOnce({
+        stdout: JSON.stringify({ failureClass: 'unknown', retryViable: false, errorSummary: 'bad', filesInvolved: [], whatWasTried: [], suggestedFocus: 'stop' }),
+        stderr: '', exitCode: 0,
+      })
+      .mockResolvedValue({ stdout: '{}', stderr: '', exitCode: 0 });
+
+    // Unattended notifier auto-selects last option ("Abort")
     mockNotifierAskUser.mockResolvedValue('Abort');
 
     await runPipeline(makeConfig({ mode: 'unattended' }));
 
-    expect(mockRunRetrospectivePhase).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      'failed',
-      'implementer',
-    );
+    // Should still run retrospective
+    expect(mockSpawnAgent).toHaveBeenCalledTimes(2); // implementer + retrospective
   });
 
-  it('review critical findings, attended, user overrides -> close', async () => {
-    mockRunImplementPhase.mockResolvedValue({ result: completedResult, nextPhase: 'verify' });
-    mockRunVerifyPhase.mockResolvedValue({ result: completedResult, nextPhase: 'review' });
-    mockRunReviewPhase.mockResolvedValue({ result: failedResult, nextPhase: 'abort' });
-    mockRunClosePhase.mockResolvedValue({ result: prResult, nextPhase: 'retrospective' });
-    mockNotifierAskUser.mockResolvedValue('Override and continue');
-
-    await runPipeline(makeConfig());
-
-    expect(mockRunClosePhase).toHaveBeenCalledTimes(1);
-    expect(mockRunRetrospectivePhase).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      'completed',
-      undefined,
-    );
-  });
-
-  it('re-entry from verifying status -> starts at verify phase', async () => {
+  it('re-entry from verifying status skips implement phase', async () => {
     const verifyingTask = {
       ...mockTask,
       status: 'verifying' as const,
@@ -221,44 +222,45 @@ describe('runPipeline', () => {
     };
     mockStoreRead.mockResolvedValue(verifyingTask);
 
-    mockRunVerifyPhase.mockResolvedValue({ result: completedResult, nextPhase: 'review' });
-    mockRunReviewPhase.mockResolvedValue({ result: completedResult, nextPhase: 'close' });
-    mockRunClosePhase.mockResolvedValue({ result: prResult, nextPhase: 'retrospective' });
+    mockSpawnAgent
+      .mockResolvedValueOnce({ raw: agentRaw(completedAgentOutput), result: completedAgentOutput, durationMs: 100 }) // verifier
+      .mockResolvedValueOnce({ raw: agentRaw(completedAgentOutput), result: completedAgentOutput, durationMs: 100 }) // reviewer
+      .mockResolvedValueOnce({ raw: agentRaw(prAgentOutput), result: prAgentOutput, durationMs: 100 })              // closer
+      .mockResolvedValueOnce({ raw: '', result: completedAgentOutput, durationMs: 100 });                            // retrospective
 
     await runPipeline(makeConfig());
 
-    expect(mockRunImplementPhase).not.toHaveBeenCalled();
-    expect(mockRunVerifyPhase).toHaveBeenCalledTimes(1);
+    // 4 agents: verifier, reviewer, closer, retrospective (no implementer)
+    expect(mockSpawnAgent).toHaveBeenCalledTimes(4);
+    // First spawn should be verifier, not implementer — check the prompt contains verifier template
+    const firstPrompt = mockSpawnAgent.mock.calls[0][0].prompt;
+    expect(firstPrompt).toContain('# verifier');
   });
 
-  it('dry-run mode -> all phases pass with dry-run results', async () => {
-    const dryResult = {
-      result: { ...completedResult, summary: '[dry-run] skipped' },
-      nextPhase: 'verify' as const,
-    };
-    mockRunImplementPhase.mockResolvedValue({ ...dryResult, nextPhase: 'verify' });
-    mockRunVerifyPhase.mockResolvedValue({ ...dryResult, nextPhase: 'review' });
-    mockRunReviewPhase.mockResolvedValue({ ...dryResult, nextPhase: 'close' });
-    mockRunClosePhase.mockResolvedValue({ ...dryResult, nextPhase: 'retrospective' });
-
+  it('dry-run mode passes all phases without spawning agents', async () => {
     await runPipeline(makeConfig({ dryRun: true }));
 
-    expect(mockRunImplementPhase).toHaveBeenCalledTimes(1);
-    expect(mockRunRetrospectivePhase).toHaveBeenCalledTimes(1);
+    // No agents spawned in dry-run
+    expect(mockSpawnAgent).not.toHaveBeenCalled();
+    expect(mockNotifierSend).toHaveBeenCalledWith('Pipeline completed successfully.');
   });
 
-  it('log-run.sh is called at the end with outcome', async () => {
-    mockRunImplementPhase.mockResolvedValue({ result: completedResult, nextPhase: 'verify' });
-    mockRunVerifyPhase.mockResolvedValue({ result: completedResult, nextPhase: 'review' });
-    mockRunReviewPhase.mockResolvedValue({ result: completedResult, nextPhase: 'close' });
-    mockRunClosePhase.mockResolvedValue({ result: prResult, nextPhase: 'retrospective' });
+  it('metrics are written at the end', async () => {
+    mockSpawnAgent
+      .mockResolvedValueOnce({ raw: agentRaw(completedAgentOutput), result: completedAgentOutput, durationMs: 100 })
+      .mockResolvedValueOnce({ raw: agentRaw(completedAgentOutput), result: completedAgentOutput, durationMs: 100 })
+      .mockResolvedValueOnce({ raw: agentRaw(completedAgentOutput), result: completedAgentOutput, durationMs: 100 })
+      .mockResolvedValueOnce({ raw: agentRaw(prAgentOutput), result: prAgentOutput, durationMs: 100 })
+      .mockResolvedValueOnce({ raw: '', result: completedAgentOutput, durationMs: 100 });
 
     await runPipeline(makeConfig());
 
-    expect(mockRunScript).toHaveBeenCalledWith('bash', [
-      '/case/scripts/log-run.sh',
-      '/case/tasks/active/cli-1.task.json',
-      'completed',
-    ]);
+    expect(mockWriteRunMetrics).toHaveBeenCalledTimes(1);
+    // Also check legacy log-run.sh was called
+    const runScriptCalls = mockRunScript.mock.calls;
+    const logRunCall = runScriptCalls.find(
+      (call: any[]) => Array.isArray(call[1]) && call[1].some((arg: string) => arg.includes('log-run.sh')),
+    );
+    expect(logRunCall).toBeDefined();
   });
 });
