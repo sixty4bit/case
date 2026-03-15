@@ -20,11 +20,11 @@ Sources informing these improvements:
 
 ## Prioritized Execution Plan
 
-> **Last revised: 2026-03-14.** Waves 1-5 complete. All 60 items accounted for: 41 completed, 19 deferred.
+> **Last revised: 2026-03-14.** All 60 items accounted for: 39 completed, 21 deferred.
 
 ### Completed (shipped as of 2026-03-14)
 
-All 41 items implemented across waves 1-5. Kept here for traceability.
+39 items implemented. Kept here for traceability.
 
 | #      | Item                                    | How it shipped                                                                                                                                                                                                   |
 | ------ | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -38,7 +38,6 @@ All 41 items implemented across waves 1-5. Kept here for traceability.
 | **15** | Deterministic context prefetching       | `src/context/prefetch.ts` + `assembler.ts` — parallel fetching, role-specific context assembly (implementer gets learnings, verifier gets minimal, closer gets prior AGENT_RESULTs)                               |
 | **18** | Cap CI retries                          | Doom-loop detection hook (threshold=3) in doom-loop-detect.sh                                                                                                                                                    |
 | **19** | Shift feedback left                     | Implementer section 3 runs typecheck + lint before committing                                                                                                                                                    |
-| **20** | Multiple entry points                   | `src/server.ts` HTTP service: GitHub webhooks, manual task creation, task dispatch. `src/entry/github-webhook.ts` + `task-factory.ts`                                                                            |
 | **22** | SHA-pinned evidence markers             | mark-tested.sh creates output_hash via shasum -a 256                                                                                                                                                             |
 | **25** | Incident-to-harness loop                | Retrospective escalates learned patterns to docs/learnings/ and golden-principles.md                                                                                                                             |
 | **28** | Structured metrics per run              | Task JSON stores tested/manualTested flags + per-phase agent status/timing                                                                                                                                       |
@@ -58,7 +57,6 @@ All 41 items implemented across waves 1-5. Kept here for traceability.
 | **46** | Attended vs unattended modes            | `src/notify.ts` — readline prompts (attended) vs auto-abort (unattended). Task schema `mode` field added                                                                                                        |
 | **47** | Context specialization                  | Agents receive role-specific context via SKILL.md routing                                                                                                                                                        |
 | **48** | Intelligent respawning                  | SKILL.md Step 4b: on implementer failure, `analyze-failure.sh` classifies error, checks working memory for prior attempts, generates targeted retry context. Max 1 intelligent retry per run                     |
-| **50** | Proactive work finding                  | `src/entry/scanners/` — CI failure (hourly), stale docs (daily), dependency (weekly) scanners. Tasks created with human approval gate                                                                            |
 | **51** | Human review gate for retrospective     | Retrospective proposes amendments to `docs/proposed-amendments/` instead of direct edits. Only repo learnings applied directly                                                                                   |
 | **52** | Success-is-silent output rule           | Scripts output only on failure; mark-tested.sh emits only to stderr                                                                                                                                              |
 | **53** | Per-agent tool profiles (enforced)      | Each agent has minimal tool set defined in agent .md frontmatter                                                                                                                                                 |
@@ -85,6 +83,7 @@ These are real improvements but don't block anything and can be picked up opport
 | **14** | Expand architecture docs         | When working in under-documented repos        |
 | **16** | Curated tool subsets             | Superseded by #53; revisit for MCP curation   |
 | **17** | Conditional rules per directory  | When a repo grows large enough to need it     |
+| **20** | Multiple entry points            | Code exists (`src/server.ts`, webhooks, task factory) but premature; activate when task volume justifies a running service |
 | **21** | Pre-warmed environments          | When bootstrap.sh becomes a bottleneck        |
 | **23** | Machine-readable risk contract   | When risk-tier routing is needed               |
 | **24** | Preflight gate before CI fanout  | Covered by #19; revisit if CI waste grows     |
@@ -95,6 +94,17 @@ These are real improvements but don't block anything and can be picked up opport
 | **38** | Promote-to-tool criteria         | Design exercise, when script count grows      |
 | **39** | Context window budget per agent  | Applied via #37, #47, #52; formalize if needed |
 | **49** | Multi-model review               | When single-reviewer blind spots are measured |
+| **50** | Proactive work finding           | Code exists (`src/entry/scanners/`) but premature; activate when manual task identification becomes a bottleneck |
+
+### Architecture Note: Orchestrator Core vs Service Layer
+
+The orchestrator was built in waves 4-5 based on patterns from Stripe Minions, OpenClaw, and other production agent systems. After review, the core and service layer have different justifications:
+
+**Orchestrator core (completed, justified at any scale):** The pipeline loop (`src/pipeline.ts`), phase modules, metrics collection, context assembly, and prompt versioning provide deterministic flow control that prose-based orchestration cannot guarantee. The arguments for these are about correctness — code enforces state transitions, retry caps, and context filtering that LLM interpretation of prose can only approximate. See items #40, #15, #46 in the completed table.
+
+**Service layer (deferred, premature for current scale):** The HTTP server (`src/server.ts`), GitHub webhooks (`src/entry/github-webhook.ts`), and background scanners (`src/entry/scanners/`) solve problems at Stripe's scale (1000 PRs/week with auto-triggered agents). Case currently operates at a handful of tasks across 5 repos. The code is left in place and compiles, but the items are deferred until task volume justifies a running service. See items #20 and #50 in the deferred table.
+
+**SDK spawning path (mistake, being corrected):** `agent-runner.ts` was built with an Agent SDK primary path and Claude CLI fallback. The SDK path bypasses hooks, plugins, and CLAUDE.md — the entire harness enforcement layer. This is being corrected to use `claude` CLI exclusively with proper flags (`--worktree`, `--allowedTools` from agent frontmatter). The CLI preserves all harness enforcement while the orchestrator handles deterministic flow control.
 
 ---
 
