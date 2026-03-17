@@ -24,7 +24,7 @@ Case uses a **six-agent pipeline** to prevent context pollution and enable self-
 | **Verifier**           | Manual testing with Playwright, evidence markers, screenshots                  | Read, Bash, Glob, Grep              |
 | **Reviewer**           | Review diff against golden principles, classify findings, gate PR creation     | Read, Bash, Glob, Grep              |
 | **Closer**             | Create PR with thorough description, satisfy hook gates, post review comments  | Read, Bash, Glob, Grep              |
-| **Retrospective**      | Apply harness improvements directly, maintain per-repo learnings               | Read, Edit, Write, Bash, Glob, Grep |
+| **Retrospective**      | Propose harness improvements, apply per-repo learnings directly                | Read, Edit, Write, Bash, Glob, Grep |
 
 Agent prompt files: `/Users/nicknisi/Developer/case/agents/{implementer,verifier,reviewer,closer,retrospective}.md`
 
@@ -350,15 +350,14 @@ Report the failure to user via `AskUserQuestion`:
      - Pipeline outcome: "completed" or "failed"
      - If failed: which agent failed and its AGENT_RESULT error
    - **subagent_type**: `general-purpose`
-   - **run_in_background**: `true` (retrospective runs async, doesn't block the pipeline)
 4. The retrospective agent **proposes amendments** to `docs/proposed-amendments/` for human review. Only repo learnings (`docs/learnings/`) are applied directly.
-5. When the background agent completes, report to the user:
+5. When the agent completes, report to the user:
    ```
    "Retrospective proposed <N> amendment(s): <summary>"
    ```
    Include the list of proposed amendment files from the AGENT_RESULT artifacts.
 
-**The retrospective never blocks the pipeline.** It runs in the background after the PR is created. If it fails or produces no proposals, the `/case` run is still complete.
+**The retrospective is awaited.** It runs after the PR is created and completes before the pipeline exits. If it fails or produces no proposals, the `/case` run is still complete.
 
 ## Re-entry Semantics
 

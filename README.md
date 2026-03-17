@@ -110,7 +110,7 @@ src/
     verify.ts           Spawn verifier (no retries — needs human judgment)
     review.ts           Spawn reviewer, check for critical findings
     close.ts            Spawn closer, extract PR URL
-    retrospective.ts    Spawn retrospective in background (fire-and-forget)
+    retrospective.ts    Spawn retrospective (awaited, runs to completion)
   util/
     parse-agent-result.ts  Extract AGENT_RESULT JSON from agent output
     parse-frontmatter.ts   Extract agent metadata from .md frontmatter
