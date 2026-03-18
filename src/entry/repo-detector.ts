@@ -1,9 +1,6 @@
 import { resolve } from 'node:path';
 import { loadProjects, resolveRepoPath } from '../config.js';
 import type { ProjectEntry } from '../types.js';
-import { createLogger } from '../util/logger.js';
-
-const log = createLogger();
 
 export interface DetectedRepo {
   name: string;
@@ -68,7 +65,6 @@ export async function detectRepo(caseRoot: string, cwd?: string): Promise<Detect
     for (const project of projects) {
       if (normalizeRemoteUrl(project.remote) === normalizedCwd) {
         const repoPath = resolveRepoPath(caseRoot, project.path);
-        log.info('repo detected via remote', { repo: project.name, remote: remoteUrl });
         return { name: project.name, path: repoPath, project };
       }
     }
@@ -79,7 +75,6 @@ export async function detectRepo(caseRoot: string, cwd?: string): Promise<Detect
   for (const project of projects) {
     const resolvedProjectPath = resolve(resolveRepoPath(caseRoot, project.path));
     if (resolvedCwd === resolvedProjectPath || resolvedCwd.startsWith(resolvedProjectPath + '/')) {
-      log.info('repo detected via path', { repo: project.name, cwd: resolvedCwd });
       return { name: project.name, path: resolvedProjectPath, project };
     }
   }

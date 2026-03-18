@@ -2,9 +2,6 @@ import { resolve } from 'node:path';
 import { homedir } from 'node:os';
 import type { IssueContext } from '../types.js';
 import { extractOwnerRepo } from './repo-detector.js';
-import { createLogger } from '../util/logger.js';
-
-const log = createLogger();
 
 const CREDENTIALS_PATH = resolve(homedir(), '.config/case/credentials');
 
@@ -44,7 +41,6 @@ export async function fetchIssue(
  */
 export async function fetchGitHubIssue(repoRemote: string, issueNumber: string): Promise<IssueContext> {
   const ownerRepo = extractOwnerRepo(repoRemote);
-  log.info('fetching github issue', { repo: ownerRepo, issue: issueNumber });
 
   const proc = Bun.spawn(
     ['gh', 'issue', 'view', issueNumber, '--repo', ownerRepo, '--json', 'title,body,labels'],
@@ -90,7 +86,6 @@ export async function fetchLinearIssue(issueId: string): Promise<IssueContext> {
     );
   }
 
-  log.info('fetching linear issue', { issue: issueId });
 
   const query = `
     query IssueById($id: String!) {

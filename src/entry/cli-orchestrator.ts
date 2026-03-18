@@ -6,11 +6,8 @@ import { createTask } from './task-factory.js';
 import { buildPipelineConfig } from '../config.js';
 import { runPipeline } from '../pipeline.js';
 import { runScript } from '../util/run-script.js';
-import { createLogger } from '../util/logger.js';
 import type { IssueContext, PipelineMode, TaskCreateRequest } from '../types.js';
 import type { TaskMatch } from './task-scanner.js';
-
-const log = createLogger();
 
 export interface CliOrchestratorOptions {
   /** Issue number, Linear ID, or free text. Undefined = re-entry via .case-active. */
@@ -92,7 +89,6 @@ export async function runCliOrchestrator(options: CliOrchestratorOptions): Promi
   // Write .case-active marker
   const markerPath = resolve(detected.path, '.case-active');
   await Bun.write(markerPath, `${taskResult.taskId}\n`);
-  log.info('wrote .case-active marker', { path: markerPath });
 
   // --- Step 3: Run baseline ---
   process.stdout.write('Running baseline (bootstrap.sh)...\n');
@@ -215,7 +211,6 @@ async function ensureBranch(branchName: string, repoPath: string): Promise<void>
       const stderr = await new Response(co.stderr).text();
       throw new Error(`Failed to checkout branch ${branchName}: ${stderr.trim()}`);
     }
-    log.info('checked out existing branch', { branch: branchName });
   } else {
     // Create new branch
     const create = Bun.spawn(['git', 'checkout', '-b', branchName], {
@@ -228,7 +223,6 @@ async function ensureBranch(branchName: string, repoPath: string): Promise<void>
       const stderr = await new Response(create.stderr).text();
       throw new Error(`Failed to create branch ${branchName}: ${stderr.trim()}`);
     }
-    log.info('created new branch', { branch: branchName });
   }
 }
 
@@ -255,7 +249,6 @@ async function ensureBranchForResume(branchName: string, repoPath: string): Prom
       const stderr = await new Response(co.stderr).text();
       throw new Error(`Failed to checkout branch ${branchName}: ${stderr.trim()}`);
     }
-    log.info('checked out existing branch for resume', { branch: branchName });
   } else {
     // Branch was deleted — recreate from HEAD
     process.stdout.write(`  Warning: branch ${branchName} not found, recreating from HEAD\n`);
@@ -269,6 +262,5 @@ async function ensureBranchForResume(branchName: string, repoPath: string): Prom
       const stderr = await new Response(create.stderr).text();
       throw new Error(`Failed to recreate branch ${branchName}: ${stderr.trim()}`);
     }
-    log.info('recreated branch from HEAD for resume', { branch: branchName });
   }
 }
