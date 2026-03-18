@@ -59,6 +59,9 @@ async function main() {
 
     const caseRoot = resolveCaseRoot();
 
+    // Suppress structured JSON logs for interactive CLI use
+    process.env.CASE_QUIET = '1';
+
     try {
       await runCliOrchestrator({
         argument: argument || undefined,

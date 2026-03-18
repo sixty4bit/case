@@ -33,8 +33,11 @@ export class TaskStore {
     return task.status;
   }
 
-  /** Set task status — validates transition via task-status.sh. */
+  /** Set task status — validates transition via task-status.sh. No-op if already at target. */
   async setStatus(status: TaskStatus): Promise<void> {
+    const current = await this.readStatus();
+    if (current === status) return;
+
     const result = await runScript('bash', [this.taskStatusScript, this.taskJsonPath, 'status', status]);
 
     if (result.exitCode !== 0) {
