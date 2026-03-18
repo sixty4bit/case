@@ -75,6 +75,22 @@
         "typecheck": "pnpm run typecheck",
         "format": "pnpm run format"
       }
+    },
+    {
+      "name": "workos-node",
+      "path": "../workos-node/main",
+      "remote": "git@github.com:workos/workos-node.git",
+      "description": "WorkOS SDK for Node/JavaScript/TypeScript projects",
+      "language": "typescript",
+      "packageManager": "npm",
+      "commands": {
+        "setup": "npm install",
+        "build": "npm run build",
+        "test": "npm test",
+        "lint": "npm run lint",
+        "typecheck": "npm run typecheck",
+        "format": "npm run format"
+      }
     }
   ]
 }
