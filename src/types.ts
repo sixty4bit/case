@@ -73,6 +73,8 @@ export interface PipelineConfig {
   caseRoot: string;
   maxRetries: number;
   dryRun: boolean;
+  /** Called periodically with elapsed ms while an agent is running. */
+  onAgentHeartbeat?: (elapsedMs: number) => void;
 }
 
 export interface ProjectEntry {
@@ -114,6 +116,8 @@ export interface SpawnAgentOptions {
   caseRoot: string;
   timeout?: number;
   background?: boolean;
+  /** Called periodically with elapsed ms while the agent is running. */
+  onHeartbeat?: (elapsedMs: number) => void;
 }
 
 export interface SpawnAgentResult {

@@ -1,7 +1,7 @@
 import type { AgentName, AgentResult, PipelineConfig, PipelinePhase } from './types.js';
 import { TaskStore } from './state/task-store.js';
 import { determineEntryPhase } from './state/transitions.js';
-import { createNotifier, type Notifier } from './notify.js';
+import { createNotifier, formatDuration, type Notifier } from './notify.js';
 import { runImplementPhase } from './phases/implement.js';
 import { runVerifyPhase } from './phases/verify.js';
 import { runReviewPhase } from './phases/review.js';
@@ -34,6 +34,11 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
   const previousResults = new Map<AgentName, AgentResult>();
   const metrics = new MetricsCollector();
 
+  // Wire up heartbeat: phases pass this to spawnAgent, which fires it every 30s
+  config.onAgentHeartbeat = (elapsedMs) => {
+    notifier.send(`  ... still running (${formatDuration(elapsedMs)})`);
+  };
+
   const task = await store.read();
   let currentPhase: PipelinePhase = determineEntryPhase(task);
   let outcome: 'completed' | 'failed' = 'completed';
@@ -48,12 +53,18 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
   while (currentPhase !== 'complete' && currentPhase !== 'abort') {
     log.phase(currentPhase, 'entering');
     const phaseAgent = PHASE_AGENT_MAP[currentPhase];
-    if (phaseAgent) metrics.startPhase(currentPhase, phaseAgent);
+    if (phaseAgent) {
+      metrics.startPhase(currentPhase, phaseAgent);
+      notifier.phaseStart(currentPhase, phaseAgent);
+    }
+    const phaseStartMs = Date.now();
 
     switch (currentPhase) {
       case 'implement': {
         const output = await runImplementPhase(config, store, previousResults);
+        const elapsed = Date.now() - phaseStartMs;
         if (output.nextPhase === 'abort') {
+          notifier.phaseEnd(currentPhase, 'implementer', elapsed, 'failed');
           metrics.endPhase('failed', config.maxRetries > 0);
           const choice = await handleFailure(notifier, config, 'implementer', output.result, [
             'Retry with guidance',
@@ -70,6 +81,7 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
             currentPhase = 'retrospective';
           }
         } else {
+          notifier.phaseEnd(currentPhase, 'implementer', elapsed, 'completed');
           metrics.endPhase('completed');
           // Track CI first-push from implementer result
           if (output.result.artifacts.testsPassed !== null) {
@@ -82,7 +94,9 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
 
       case 'verify': {
         const output = await runVerifyPhase(config, store, previousResults);
+        const elapsed = Date.now() - phaseStartMs;
         if (output.nextPhase === 'abort') {
+          notifier.phaseEnd(currentPhase, 'verifier', elapsed, 'failed');
           metrics.endPhase('failed');
           const choice = await handleFailure(notifier, config, 'verifier', output.result, [
             'Re-implement and re-verify',
@@ -99,6 +113,7 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
             currentPhase = 'retrospective';
           }
         } else {
+          notifier.phaseEnd(currentPhase, 'verifier', elapsed, 'completed');
           metrics.endPhase('completed');
           currentPhase = output.nextPhase;
         }
@@ -107,11 +122,13 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
 
       case 'review': {
         const output = await runReviewPhase(config, store, previousResults);
+        const elapsed = Date.now() - phaseStartMs;
         // Capture review findings in metrics
         if (output.result.findings) {
           metrics.setReviewFindings(output.result.findings);
         }
         if (output.nextPhase === 'abort') {
+          notifier.phaseEnd(currentPhase, 'reviewer', elapsed, 'failed');
           metrics.endPhase('failed');
           const choice = await handleFailure(notifier, config, 'reviewer', output.result, [
             'Re-implement and re-review',
@@ -128,6 +145,7 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
             currentPhase = 'retrospective';
           }
         } else {
+          notifier.phaseEnd(currentPhase, 'reviewer', elapsed, 'completed');
           metrics.endPhase('completed');
           currentPhase = output.nextPhase;
         }
@@ -136,7 +154,9 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
 
       case 'close': {
         const output = await runClosePhase(config, store, previousResults);
+        const elapsed = Date.now() - phaseStartMs;
         if (output.nextPhase === 'abort') {
+          notifier.phaseEnd(currentPhase, 'closer', elapsed, 'failed');
           metrics.endPhase('failed');
           const choice = await handleFailure(notifier, config, 'closer', output.result, ['Retry', 'Abort']);
           if (choice === 'Retry') {
@@ -147,6 +167,7 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
             currentPhase = 'retrospective';
           }
         } else {
+          notifier.phaseEnd(currentPhase, 'closer', elapsed, 'completed');
           metrics.endPhase('completed');
           const prUrl = output.result.artifacts.prUrl;
           if (prUrl) {
@@ -159,7 +180,10 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
 
       case 'retrospective': {
         metrics.startPhase('retrospective', 'retrospective');
+        notifier.phaseStart(currentPhase, 'retrospective');
+        const retroStart = Date.now();
         await runRetrospectivePhase(config, store, previousResults, outcome, failedAgent);
+        notifier.phaseEnd(currentPhase, 'retrospective', Date.now() - retroStart, 'completed');
         metrics.endPhase('completed');
         currentPhase = outcome === 'completed' ? 'complete' : 'abort';
         break;

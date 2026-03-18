@@ -51,6 +51,7 @@ export async function runVerifyPhase(
     cwd: config.repoPath,
     agentName: 'verifier',
     caseRoot: config.caseRoot,
+    onHeartbeat: config.onAgentHeartbeat,
   });
 
   if (result.status === 'completed') {

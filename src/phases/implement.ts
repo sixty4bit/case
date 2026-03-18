@@ -41,6 +41,7 @@ export async function runImplementPhase(
     cwd: config.repoPath,
     agentName: 'implementer',
     caseRoot: config.caseRoot,
+    onHeartbeat: config.onAgentHeartbeat,
   });
 
   if (result.status === 'completed') {
@@ -121,6 +122,7 @@ async function attemptRetry(
     cwd: config.repoPath,
     agentName: 'implementer',
     caseRoot: config.caseRoot,
+    onHeartbeat: config.onAgentHeartbeat,
   });
 
   if (retryResult.status === 'completed') {

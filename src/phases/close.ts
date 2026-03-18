@@ -53,6 +53,7 @@ export async function runClosePhase(
     cwd: config.repoPath,
     agentName: 'closer',
     caseRoot: config.caseRoot,
+    onHeartbeat: config.onAgentHeartbeat,
   });
 
   if (result.status === 'completed') {

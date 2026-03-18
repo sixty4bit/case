@@ -52,6 +52,7 @@ export async function runReviewPhase(
     cwd: config.repoPath,
     agentName: 'reviewer',
     caseRoot: config.caseRoot,
+    onHeartbeat: config.onAgentHeartbeat,
   });
 
   await store.setAgentPhase(

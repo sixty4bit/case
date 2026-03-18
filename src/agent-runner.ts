@@ -1,9 +1,12 @@
 import { parseAgentResult } from './util/parse-agent-result.js';
 import { loadAgentMetadata } from './util/parse-frontmatter.js';
 import { createLogger } from './util/logger.js';
+import { formatDuration } from './notify.js';
 import type { AgentMetadata, SpawnAgentOptions, SpawnAgentResult } from './types.js';
 
 const log = createLogger();
+
+const HEARTBEAT_INTERVAL_MS = 30_000; // 30s
 
 /**
  * Spawn a Claude Code session via the CLI with proper harness enforcement.
@@ -29,6 +32,13 @@ export async function spawnAgent(options: SpawnAgentOptions): Promise<SpawnAgent
     timeout,
     background: options.background,
   });
+
+  // Heartbeat: print elapsed time every 30s so the user knows it's alive
+  const heartbeat = options.onHeartbeat
+    ? setInterval(() => {
+        options.onHeartbeat!(Date.now() - start);
+      }, HEARTBEAT_INTERVAL_MS)
+    : undefined;
 
   try {
     const raw = await runClaude(options, metadata, timeout);
@@ -62,6 +72,8 @@ export async function spawnAgent(options: SpawnAgentOptions): Promise<SpawnAgent
       },
       durationMs,
     };
+  } finally {
+    if (heartbeat) clearInterval(heartbeat);
   }
 }
 
