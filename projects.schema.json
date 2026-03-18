@@ -18,6 +18,12 @@
             "type": "string",
             "description": "Short identifier for the repo (used in task file prefixes)"
           },
+          "type": {
+            "type": "string",
+            "enum": ["app", "library"],
+            "description": "Whether this repo has a web UI (app) or is a pure library. Library repos skip the Playwright manual test requirement.",
+            "default": "app"
+          },
           "path": {
             "type": "string",
             "description": "Relative path from case/ to the repo root"

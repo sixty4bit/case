@@ -50,7 +50,7 @@ elif ! grep -q "output_hash:" ".case-tested" 2>/dev/null; then
   FIXES+=("  FIX: Run tests properly: pnpm test 2>&1 | bash /Users/nicknisi/Developer/case/scripts/mark-tested.sh")
 fi
 
-# Check 3: Manual testing (smart — only required if src/ files changed)
+# Check 3: Manual testing (smart — only required if src/ files changed AND repo has a UI)
 NEEDS_MANUAL_TEST=false
 if git diff --name-only HEAD~1 2>/dev/null | grep -q "^src/"; then
   NEEDS_MANUAL_TEST=true
@@ -58,6 +58,29 @@ fi
 # Also check staged changes if no commits yet on this branch
 if git diff --name-only main 2>/dev/null | grep -q "^src/"; then
   NEEDS_MANUAL_TEST=true
+fi
+
+# Skip manual test for library repos (no web UI to test with Playwright)
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || echo "")
+CASE_PROJECTS="/Users/nicknisi/Developer/case/projects.json"
+if [[ -n "$REPO_ROOT" && -f "$CASE_PROJECTS" ]]; then
+  REPO_TYPE=$(python3 -c "
+import json, os, sys
+try:
+    projects = json.load(open('$CASE_PROJECTS'))
+    repo_root = os.path.realpath('$REPO_ROOT')
+    for repo in projects.get('repos', []):
+        abs_path = os.path.realpath(os.path.join('/Users/nicknisi/Developer/case', repo.get('path', '')))
+        if abs_path == repo_root:
+            print(repo.get('type', 'app'))
+            sys.exit(0)
+except Exception:
+    pass
+print('app')
+" 2>/dev/null || echo "app")
+  if [[ "$REPO_TYPE" == "library" ]]; then
+    NEEDS_MANUAL_TEST=false
+  fi
 fi
 
 if [[ "$NEEDS_MANUAL_TEST" == "true" ]]; then

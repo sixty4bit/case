@@ -48,14 +48,138 @@ Read the output to understand: current branch, last commits, task status, which 
 
 ### 2. Determine Scope
 
-Check if `src/` files changed (use both HEAD~1 and main to match the pre-PR hook's broader check):
+First, check if this is a library repo (no web UI):
+
+```bash
+python3 -c "
+import json, os, sys
+projects = json.load(open('/Users/nicknisi/Developer/case/projects.json'))
+repo_root = os.path.realpath('$(git rev-parse --show-toplevel)')
+for repo in projects.get('repos', []):
+    abs_path = os.path.realpath(os.path.join('/Users/nicknisi/Developer/case', repo.get('path', '')))
+    if abs_path == repo_root:
+        print(repo.get('type', 'app'))
+        sys.exit(0)
+print('app')
+"
+```
+
+- **If `library`**: This is a pure library with no web UI. Skip Playwright (step 3) and go to **step 2b (Library Verification)** instead.
+
+Then check if `src/` files changed (use both HEAD~1 and main to match the pre-PR hook's broader check):
 
 ```bash
 git diff --name-only HEAD~1 | grep "^src/" || git diff --name-only main | grep "^src/"
 ```
 
-- **If `src/` files changed**: Manual testing is required. Continue to step 3.
+- **If `src/` files changed AND repo type is `app`**: Manual testing is required. Continue to step 3.
 - **If NO `src/` files changed**: Manual testing is optional. Skip to step 5 (Record), marking verification as complete without Playwright evidence.
+
+### 2b. Library Verification
+
+For library repos, you verify by writing and running a **scenario script** that exercises the change from a consumer's perspective — the same thing an engineer would do to confirm a fix before merging. You are an independent verifier: you did not write this code.
+
+#### Phase 1: Build & Test Suite
+
+1. **Read the diff** to understand what changed:
+   ```bash
+   git diff main --stat
+   git diff main -- src/
+   ```
+
+2. **Build the package** (so your scenario script imports the real build output):
+   ```bash
+   <build command from projects.json>
+   ```
+   If build fails, report failure immediately.
+
+3. **Run typecheck** (if available):
+   ```bash
+   <typecheck command from projects.json>
+   ```
+
+4. **Re-run the full test suite** independently:
+   ```bash
+   <test command from projects.json> 2>&1 | tee /tmp/verifier-test-output.txt
+   ```
+   If tests fail, report failure immediately.
+
+#### Phase 2: Scenario Script
+
+This is the critical step. Write a short script (10-30 lines) that exercises the **specific change** from the issue as an external consumer would use it. This catches things unit tests miss: export issues, real API behavior, integration gaps.
+
+5. **Read the issue** from the task file to understand the exact scenario.
+
+6. **Read credentials** if the scenario needs real API calls:
+   ```bash
+   cat ~/.config/case/credentials
+   ```
+   Credentials available: `WORKOS_API_KEY`, `WORKOS_CLIENT_ID`, and others. Use them in the script via environment variables — never hardcode them.
+
+7. **Write the scenario script** to `/tmp/verify-<task-id>.ts` (or `.js`). The script should:
+   - Import from the local package (e.g., `import { WorkOS } from './src/index.ts'` or from the build output)
+   - Exercise the exact code path that was changed or added
+   - Assert the expected behavior (throw on failure, print PASS on success)
+   - Be self-contained and disposable (not committed)
+
+   **Examples by change type:**
+
+   *Bug fix — a method was returning wrong results:*
+   ```ts
+   import { WorkOS } from './src/index.ts';
+   const workos = new WorkOS({ apiKey: process.env.WORKOS_API_KEY });
+   // Reproduce the exact scenario from the issue
+   const result = workos.sso.getAuthorizationUrl({
+     redirectUri: 'http://localhost:3000/callback',
+     clientId: process.env.WORKOS_CLIENT_ID!,
+   });
+   // Verify the fix: URL should contain the expected parameter
+   if (!result.includes('client_id=')) throw new Error('FAIL: missing client_id in URL');
+   console.log('PASS: authorization URL contains client_id');
+   ```
+
+   *New feature — a new method or option was added:*
+   ```ts
+   import { WorkOS } from './src/index.ts';
+   const workos = new WorkOS({ apiKey: process.env.WORKOS_API_KEY });
+   // Verify the new API exists and returns expected shape
+   const result = await workos.organizations.list({ limit: 1 });
+   if (!Array.isArray(result.data)) throw new Error('FAIL: expected array');
+   console.log('PASS: new list method returns expected shape');
+   ```
+
+   *Export change — a new type or function was exported:*
+   ```ts
+   // Verify the export is accessible from the package entry point
+   import { NewType, newFunction } from './src/index.ts';
+   if (typeof newFunction !== 'function') throw new Error('FAIL: newFunction not exported');
+   console.log('PASS: new exports are accessible');
+   ```
+
+   **Guidelines:**
+   - If the change is purely structural (types, exports, refactoring), the script can be synchronous and skip API calls
+   - If the change affects runtime behavior (bug fix, new API method), make real API calls using credentials
+   - If real API calls would be destructive or require specific server state, test what you can (URL generation, serialization, type checks) and note the limitation
+   - Keep it focused — test the specific change, not the entire SDK
+
+8. **Run the scenario script:**
+   ```bash
+   # Load credentials as env vars
+   set -a; source ~/.config/case/credentials; set +a
+   bun /tmp/verify-<task-id>.ts 2>&1 | tee -a /tmp/verifier-test-output.txt
+   ```
+   If the script fails, report exactly what failed and why.
+
+#### Phase 3: Record Evidence
+
+9. **Create the manual-tested marker** with combined test + scenario output:
+   ```bash
+   cat /tmp/verifier-test-output.txt | bash /Users/nicknisi/Developer/case/scripts/mark-manual-tested.sh --library
+   ```
+
+10. Continue to step 5 (Record).
+
+**Credential safety:** The scenario script reads credentials from env vars at runtime. **Never** write credential values into the script file, task file, or AGENT_RESULT. The script in `/tmp/` is disposable and not committed.
 
 ### 3. Test the Specific Fix
 
