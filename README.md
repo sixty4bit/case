@@ -49,7 +49,9 @@ graph TD
     RETRO --> S["Propose amendments + update learnings"]
 ```
 
-Steps 0-3 (issue parsing, task creation, branch setup) are handled by the LLM orchestrator. Steps 4-9 (implement through retrospective) are handled by the **programmatic orchestrator** — a TypeScript `while`/`switch` loop that makes phase transitions deterministic rather than LLM-interpreted.
+Steps 0-3 (issue parsing, task creation, branch setup) are handled by the CLI orchestrator. Steps 4-9 (implement through retrospective) are handled by the **programmatic orchestrator** — a TypeScript `while`/`switch` loop that makes phase transitions deterministic rather than LLM-interpreted.
+
+All agents run as [Pi](https://github.com/nicknisi/pi) sessions — the orchestrator as an interactive session with a TUI, sub-agents as batch sessions. Each agent role can use a different model/provider via `~/.config/case/config.json`.
 
 ### The Agents
 
@@ -76,46 +78,75 @@ The pipeline's flow control (Steps 4-9) runs as a TypeScript program rather than
 
 ### Usage
 
+Three ways to run Case:
+
 ```bash
-# Dry run — logs phase transitions without spawning agents
-bun src/index.ts --task tasks/active/cli-1-issue-53.task.json --dry-run
+# 1. Interactive mode — conversational TUI with Pi, can discuss before executing
+xcase --agent              # freeform planning session
+xcase --agent 1234         # start working on GitHub issue #1234
 
-# Full pipeline, attended (prompts human on failure)
-bun src/index.ts --task tasks/active/cli-1-issue-53.task.json
+# 2. Batch mode — detect repo, fetch issue, run full pipeline
+xcase 1234                 # GitHub issue
+xcase DX-1234              # Linear issue
+xcase                      # resume active task via .case-active marker
 
-# Full pipeline, unattended (auto-aborts on failure)
-bun src/index.ts --task tasks/active/cli-1-issue-53.task.json --mode unattended
+# 3. Task mode — run pipeline for an existing task file
+xcase --task tasks/active/cli-1-issue-53.task.json
+xcase --task tasks/active/cli-1-issue-53.task.json --mode unattended
+xcase --task tasks/active/cli-1-issue-53.task.json --dry-run
 ```
 
-The `/case` skill dispatches to the orchestrator automatically after Step 3 (branch + baseline). You can also invoke it directly for existing task files.
+Override the model for all agents in a single run:
+
+```bash
+xcase --model claude-opus-4-5 1234
+xcase --model gemini-2.5-pro --agent 1234
+```
+
+The `/case` skill dispatches to the orchestrator automatically. You can also invoke `xcase` directly.
 
 ### Architecture
 
 ```
 src/
-  index.ts              CLI entry point (run, create, serve)
-  pipeline.ts           Core while/switch loop (replaces SKILL.md Steps 4-9)
-  notify.ts             Attended (readline) vs unattended (auto-abort) notifier
-  agent-runner.ts       Spawns Claude Code via CLI, parses AGENT_RESULT
-  config.ts             Loads projects.json, resolves paths, builds config
-  types.ts              TaskJson, AgentResult, PipelineConfig, etc.
+  index.ts                CLI entry point (run, create, serve, --agent)
+  pipeline.ts             Core while/switch loop (Steps 4-9)
+  notify.ts               Attended (readline) vs unattended (auto-abort) notifier
+  config.ts               Loads projects.json, resolves paths, builds PipelineConfig
+  types.ts                TaskJson, AgentResult, PipelineConfig, AgentModelConfig, etc.
+  agent/
+    pi-runner.ts          Spawn Pi batch sessions per agent role
+    orchestrator-session.ts  Interactive Pi session for --agent mode
+    config.ts             Per-agent model config (~/.config/case/config.json)
+    tool-sets.ts          Scoped Pi tools per agent role (read-only vs full write)
+    prompt-loader.ts      Load agent .md prompts, strip frontmatter
+    tools/
+      pipeline-tool.ts    Pi tool: run the case pipeline from interactive session
+      issue-tool.ts       Pi tool: fetch issues from GitHub/Linear
+      task-tool.ts        Pi tool: create task files
+      baseline-tool.ts    Pi tool: run bootstrap.sh
+  entry/
+    cli-orchestrator.ts   Steps 0-3: detect repo, fetch issue, create task, baseline
+    issue-fetcher.ts      GitHub (gh CLI) and Linear (GraphQL) issue fetching
+    repo-detector.ts      Auto-detect target repo from cwd
+    task-factory.ts       Create .md + .task.json pairs
+    task-scanner.ts       Find existing tasks for re-entry
   state/
-    task-store.ts       Reads JSON directly, writes through task-status.sh
-    transitions.ts      Deterministic re-entry from any task state
+    task-store.ts         Reads JSON directly, writes through task-status.sh
+    transitions.ts        Deterministic re-entry from any task state
   context/
-    prefetch.ts         Parallel repo context gathering (session, learnings, commits)
-    assembler.ts        Role-specific prompt assembly per agent
+    prefetch.ts           Parallel repo context gathering (session, learnings, commits)
+    assembler.ts          Role-specific prompt assembly per agent
   phases/
-    implement.ts        Spawn implementer + intelligent retry (max 1)
-    verify.ts           Spawn verifier (no retries — needs human judgment)
-    review.ts           Spawn reviewer, check for critical findings
-    close.ts            Spawn closer, extract PR URL
-    retrospective.ts    Spawn retrospective (awaited, runs to completion)
+    implement.ts          Spawn implementer + intelligent retry (max 1)
+    verify.ts             Spawn verifier (no retries — needs human judgment)
+    review.ts             Spawn reviewer, check for critical findings
+    close.ts              Spawn closer, extract PR URL
+    retrospective.ts      Spawn retrospective (awaited, runs to completion)
   util/
-    parse-agent-result.ts  Extract AGENT_RESULT JSON from agent output
-    parse-frontmatter.ts   Extract agent metadata from .md frontmatter
-    run-script.ts          Safe execFile wrapper (no shell injection)
-    logger.ts              Structured JSON-lines to stderr
+    parse-agent-result.ts Extract AGENT_RESULT JSON from agent output
+    run-script.ts         Safe execFile wrapper (no shell injection)
+    logger.ts             Structured JSON-lines to stderr
 ```
 
 ### Context Isolation
@@ -126,6 +157,32 @@ Each agent receives only what it needs — not everything:
 - **Verifier**: task + repo path (deliberately minimal — fresh-context testing)
 - **Reviewer**: task + repo path (reads golden principles itself)
 - **Closer**: task + repo + verifier AGENT_RESULT + reviewer AGENT_RESULT
+
+## Model Configuration
+
+Each agent role can use a different model and provider. Configure via `~/.config/case/config.json`:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/workos/case/main/config.schema.json",
+  "models": {
+    "default": { "provider": "anthropic", "model": "claude-sonnet-4-20250514" },
+    "reviewer": { "provider": "google", "model": "gemini-2.5-pro" },
+    "retrospective": { "provider": "anthropic", "model": "claude-haiku-4-5-20251001" },
+    "verifier": null
+  }
+}
+```
+
+- **`default`** — used when a role has no specific config
+- **Role-specific** — set provider + model per agent (implementer, verifier, reviewer, closer, retrospective, orchestrator)
+- **`null`** — explicitly means "use default"
+- **Missing file** — all agents use Claude Sonnet (hardcoded default)
+- **`--model` flag** — overrides config for all agents in a single run
+
+Priority chain: `--model` CLI flag > explicit `spawnAgent` options > config file > hardcoded defaults.
+
+Pi's `ModelRegistry` supports 20+ providers (Anthropic, Google, OpenAI, local models, etc.) — any model ID that Pi recognizes works here.
 
 ## Self-Improvement
 
@@ -189,13 +246,19 @@ If a `/case` run is interrupted, re-run the same command. The orchestrator detec
 /case 34
 ```
 
-### Use interactively
+### Interactive mode
+
+Start a conversational session with the case orchestrator:
 
 ```bash
-/case fix a bug where session cookies aren't being set correctly
+# Freeform — discuss, plan, explore before running anything
+xcase --agent
+
+# Issue-directed — starts working immediately
+xcase --agent 1234
 ```
 
-Loads harness context (landscape, conventions, playbooks) for the current task without the full pipeline.
+The interactive mode uses Pi's TUI. You can discuss approaches, ask questions about the codebase, and trigger the pipeline when ready. The orchestrator has tools for fetching issues, creating tasks, running baselines, and executing the full pipeline — all invokable through conversation.
 
 ## Task Tracking
 
@@ -295,13 +358,19 @@ hooks/
   post-pr-cleanup.sh                Update task JSON status, clean markers
   doom-loop-detect.sh               Detect repeated identical failures, break retry loops
 src/                                Programmatic orchestrator (TypeScript)
-  index.ts                          CLI entry point
+  index.ts                          CLI entry point (--agent, --model, --task)
   pipeline.ts                       Core while/switch loop (Steps 4-9)
-  agent-runner.ts                   Spawn Claude Code via CLI, parse AGENT_RESULT
+  agent/                            Pi-based agent infrastructure
+    pi-runner.ts                    Spawn Pi batch sessions per role
+    orchestrator-session.ts         Interactive Pi session (--agent mode)
+    config.ts                       Per-agent model config
+    tools/                          Orchestrator tools (pipeline, issue, task, baseline)
+  entry/                            CLI orchestrator (Steps 0-3)
   phases/                           One module per pipeline phase
   context/                          Role-specific prompt assembly
   state/                            Task store + re-entry logic
   util/                             Parser, script runner, logger
+config.schema.json                  JSON Schema for ~/.config/case/config.json
 
 AGENTS.md                           Entry point for agents (project landscape)
 CLAUDE.md                           How to improve case itself
