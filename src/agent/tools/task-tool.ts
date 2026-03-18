@@ -18,7 +18,7 @@ export function createTaskTool(caseRoot: string): ToolDefinition<typeof taskPara
     description: 'Create a new case task with JSON and markdown files',
     promptSnippet: 'Create a new task for a repo',
     parameters: taskParams,
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
+    execute: async (_toolCallId, params, _signal, _onUpdate, _ctx) => {
       const request: TaskCreateRequest = {
         repo: params.repo,
         title: params.title,

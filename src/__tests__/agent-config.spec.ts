@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, afterAll } from 'bun:test';
+import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
 import { mkdir, rm } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { homedir } from 'node:os';
@@ -17,18 +17,6 @@ const BACKUP_PATH = resolve(CONFIG_DIR, 'config.json.test-backup');
 
 let originalConfigExists = false;
 
-// Dynamic import to get fresh module each time (config is not cached)
-async function freshImport() {
-  // Bust module cache by using dynamic import with unique query
-  const mod = await import(`../agent/config.js?t=${Date.now()}`);
-  return mod as {
-    loadConfig: typeof import('../agent/config.js').loadConfig;
-    getModelForAgent: typeof import('../agent/config.js').getModelForAgent;
-  };
-}
-
-// Actually, bun module caching means we can just import once and
-// it reads the file each time (loadConfig reads from disk per call)
 const { loadConfig, getModelForAgent } = await import('../agent/config.js');
 
 describe('loadConfig', () => {

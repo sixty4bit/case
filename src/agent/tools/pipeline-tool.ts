@@ -9,21 +9,20 @@ const pipelineParams = Type.Object({
   dryRun: Type.Optional(Type.Boolean({ description: 'Skip agent spawning' })),
 });
 
-export function createPipelineTool(caseRoot: string): ToolDefinition<typeof pipelineParams> {
+export function createPipelineTool(_caseRoot: string): ToolDefinition<typeof pipelineParams> {
   return {
     name: 'run_pipeline',
     label: 'Pipeline',
     description: 'Run the case agent pipeline (implement → verify → review → close → retrospective) for a task',
     promptSnippet: 'Run the case pipeline for a task file',
     parameters: pipelineParams,
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
+    execute: async (_toolCallId, params, _signal, onUpdate, _ctx) => {
       const config = await buildPipelineConfig({
         taskJsonPath: params.taskJsonPath,
         mode: (params.mode as 'attended' | 'unattended') ?? 'attended',
         dryRun: params.dryRun ?? false,
       });
 
-      const start = Date.now();
       config.onAgentHeartbeat = (elapsedMs) => {
         onUpdate?.({
           content: [{ type: 'text', text: `... still running (${Math.floor(elapsedMs / 1000)}s)\n` }],

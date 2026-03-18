@@ -1,7 +1,7 @@
 import { describe, it, expect, mock, beforeEach } from 'bun:test';
 import { mockSpawnAgent, mockRunScript } from './mocks.js';
-import type { TaskJson, AgentResult } from '../types.js';
-import { mkdir, rm } from 'node:fs/promises';
+import type { TaskJson } from '../types.js';
+import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
 // --- Mock dependencies ---

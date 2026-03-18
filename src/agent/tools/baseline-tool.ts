@@ -14,7 +14,7 @@ export function createBaselineTool(caseRoot: string): ToolDefinition<typeof base
     description: 'Run bootstrap.sh to verify a repo meets baseline conventions',
     promptSnippet: 'Run baseline checks on a repo',
     parameters: baselineParams,
-    execute: async (toolCallId, params, signal, onUpdate, ctx) => {
+    execute: async (_toolCallId, params, _signal, _onUpdate, _ctx) => {
       const bootstrapScript = resolve(caseRoot, 'scripts/bootstrap.sh');
       const result = await runScript('bash', [bootstrapScript, params.repoName], {
         cwd: caseRoot,
