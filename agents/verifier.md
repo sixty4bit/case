@@ -82,18 +82,22 @@ For library repos, you verify by writing and running a **scenario script** that 
 #### Phase 1: Build & Test Suite
 
 1. **Read the diff** to understand what changed:
+
    ```bash
    git diff main --stat
    git diff main -- src/
    ```
 
 2. **Build the package** (so your scenario script imports the real build output):
+
    ```bash
    <build command from projects.json>
    ```
+
    If build fails, report failure immediately.
 
 3. **Run typecheck** (if available):
+
    ```bash
    <typecheck command from projects.json>
    ```
@@ -111,9 +115,11 @@ This is the critical step. Write a short script (10-30 lines) that exercises the
 5. **Read the issue** from the task file to understand the exact scenario.
 
 6. **Read credentials** if the scenario needs real API calls:
+
    ```bash
    cat ~/.config/case/credentials
    ```
+
    Credentials available: `WORKOS_API_KEY`, `WORKOS_CLIENT_ID`, and others. Use them in the script via environment variables — never hardcode them.
 
 7. **Write the scenario script** to `/tmp/verify-<task-id>.ts` (or `.js`). The script should:
@@ -124,7 +130,8 @@ This is the critical step. Write a short script (10-30 lines) that exercises the
 
    **Examples by change type:**
 
-   *Bug fix — a method was returning wrong results:*
+   _Bug fix — a method was returning wrong results:_
+
    ```ts
    import { WorkOS } from './src/index.ts';
    const workos = new WorkOS({ apiKey: process.env.WORKOS_API_KEY });
@@ -138,7 +145,8 @@ This is the critical step. Write a short script (10-30 lines) that exercises the
    console.log('PASS: authorization URL contains client_id');
    ```
 
-   *New feature — a new method or option was added:*
+   _New feature — a new method or option was added:_
+
    ```ts
    import { WorkOS } from './src/index.ts';
    const workos = new WorkOS({ apiKey: process.env.WORKOS_API_KEY });
@@ -148,7 +156,8 @@ This is the critical step. Write a short script (10-30 lines) that exercises the
    console.log('PASS: new list method returns expected shape');
    ```
 
-   *Export change — a new type or function was exported:*
+   _Export change — a new type or function was exported:_
+
    ```ts
    // Verify the export is accessible from the package entry point
    import { NewType, newFunction } from './src/index.ts';
@@ -173,6 +182,7 @@ This is the critical step. Write a short script (10-30 lines) that exercises the
 #### Phase 3: Record Evidence
 
 9. **Create the manual-tested marker** with combined test + scenario output:
+
    ```bash
    cat /tmp/verifier-test-output.txt | bash /Users/nicknisi/Developer/case/scripts/mark-manual-tested.sh --library
    ```

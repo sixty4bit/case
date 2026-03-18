@@ -21,21 +21,21 @@ Pi's `getModel(provider, modelId)` already supports 20+ providers with a one-lin
 
 ### New Files
 
-| File Path | Purpose |
-|---|---|
-| `src/agent/config.ts` | Load and validate model configuration from `~/.config/case/config.json` |
-| `config.schema.json` | JSON Schema for the config file |
-| `src/__tests__/agent-config.spec.ts` | Tests for config loading, defaults, validation |
+| File Path                            | Purpose                                                                 |
+| ------------------------------------ | ----------------------------------------------------------------------- |
+| `src/agent/config.ts`                | Load and validate model configuration from `~/.config/case/config.json` |
+| `config.schema.json`                 | JSON Schema for the config file                                         |
+| `src/__tests__/agent-config.spec.ts` | Tests for config loading, defaults, validation                          |
 
 ### Modified Files
 
-| File Path | Changes |
-|---|---|
-| `src/agent/pi-runner.ts` | Read model config for the agent role, pass provider/model to `getModel()` |
-| `src/agent/orchestrator-session.ts` | Read orchestrator model config |
-| `src/types.ts` | Add `AgentModelConfig` interface |
-| `src/entry/cli-orchestrator.ts` | Pass `--model` override if provided via CLI |
-| `src/index.ts` | Add `--model` flag for one-off model override |
+| File Path                           | Changes                                                                   |
+| ----------------------------------- | ------------------------------------------------------------------------- |
+| `src/agent/pi-runner.ts`            | Read model config for the agent role, pass provider/model to `getModel()` |
+| `src/agent/orchestrator-session.ts` | Read orchestrator model config                                            |
+| `src/types.ts`                      | Add `AgentModelConfig` interface                                          |
+| `src/entry/cli-orchestrator.ts`     | Pass `--model` override if provided via CLI                               |
+| `src/index.ts`                      | Add `--model` flag for one-off model override                             |
 
 ## Implementation Details
 
@@ -76,11 +76,11 @@ Pi's `getModel(provider, modelId)` already supports 20+ providers with a one-lin
 ### 2. Config Loader (`src/agent/config.ts`)
 
 ```typescript
-import { resolve } from "node:path";
-import { homedir } from "node:os";
-import type { AgentModelConfig } from "../types.js";
+import { resolve } from 'node:path';
+import { homedir } from 'node:os';
+import type { AgentModelConfig } from '../types.js';
 
-const CONFIG_PATH = resolve(homedir(), ".config/case/config.json");
+const CONFIG_PATH = resolve(homedir(), '.config/case/config.json');
 
 interface CaseConfig {
   models?: {
@@ -94,8 +94,8 @@ interface CaseConfig {
 }
 
 const DEFAULT_MODEL: AgentModelConfig = {
-  provider: "anthropic",
-  model: "claude-sonnet-4-20250514",
+  provider: 'anthropic',
+  model: 'claude-sonnet-4-20250514',
 };
 
 export async function loadConfig(): Promise<CaseConfig> {
@@ -121,6 +121,7 @@ export async function getModelForAgent(agentName: string): Promise<AgentModelCon
 ```
 
 **Key decisions**:
+
 - Config is loaded per `spawnAgent` call (not cached) — supports changing config between runs without restart
 - `null` for a role explicitly means "use default" (vs missing key, which also means default)
 - No validation beyond JSON parsing — invalid provider/model will surface as Pi errors with clear messages
@@ -129,14 +130,14 @@ export async function getModelForAgent(agentName: string): Promise<AgentModelCon
 ### 3. Wire into Pi Runner (`src/agent/pi-runner.ts`)
 
 ```typescript
-import { getModelForAgent } from "./config.js";
+import { getModelForAgent } from './config.js';
 // Note: Phase 1 already uses ModelRegistry.find() (plain strings, no as-any casts)
 // instead of getModel() from pi-ai (which requires string literal types).
 
 export async function spawnAgent(options: SpawnAgentOptions): Promise<SpawnAgentResult> {
   // CLI --model flag overrides config file
   const modelConfig = options.model
-    ? { provider: options.provider ?? "anthropic", model: options.model }
+    ? { provider: options.provider ?? 'anthropic', model: options.model }
     : await getModelForAgent(options.agentName);
 
   const model = registry.find(modelConfig.provider, modelConfig.model);
@@ -171,11 +172,12 @@ export interface AgentModelConfig {
 
 ### Unit Tests
 
-| Test File | Coverage |
-|---|---|
+| Test File                            | Coverage                                                             |
+| ------------------------------------ | -------------------------------------------------------------------- |
 | `src/__tests__/agent-config.spec.ts` | Config loading, missing file, role fallback, null role, CLI override |
 
 **Key test cases**:
+
 - Missing config file → all defaults
 - Role has specific config → uses it
 - Role is `null` → falls back to default
@@ -191,13 +193,13 @@ export interface AgentModelConfig {
 
 ## Error Handling
 
-| Error Scenario | Handling Strategy |
-|---|---|
-| Config file missing | Use all defaults, no error |
-| Config file invalid JSON | Log warning, use all defaults |
-| Invalid provider name | Pi's `getModel` throws — surface error with "Check ~/.config/case/config.json" |
-| Invalid model ID | Pi's `getModel` throws — surface error with model listing from Pi's registry |
-| API key missing for configured provider | Pi prompts for key (interactive) or fails with clear message (batch) |
+| Error Scenario                          | Handling Strategy                                                              |
+| --------------------------------------- | ------------------------------------------------------------------------------ |
+| Config file missing                     | Use all defaults, no error                                                     |
+| Config file invalid JSON                | Log warning, use all defaults                                                  |
+| Invalid provider name                   | Pi's `getModel` throws — surface error with "Check ~/.config/case/config.json" |
+| Invalid model ID                        | Pi's `getModel` throws — surface error with model listing from Pi's registry   |
+| API key missing for configured provider | Pi prompts for key (interactive) or fails with clear message (batch)           |
 
 ## Validation Commands
 

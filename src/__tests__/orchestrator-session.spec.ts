@@ -73,7 +73,14 @@ const { startOrchestratorSession } = await import('../agent/orchestrator-session
 const mockDetected = {
   name: 'cli',
   path: '/repos/cli',
-  project: { name: 'cli', path: '../cli/main', remote: 'git@github.com:workos/cli.git', language: 'ts', packageManager: 'pnpm', commands: {} },
+  project: {
+    name: 'cli',
+    path: '../cli/main',
+    remote: 'git@github.com:workos/cli.git',
+    language: 'ts',
+    packageManager: 'pnpm',
+    commands: {},
+  },
 };
 
 describe('startOrchestratorSession', () => {

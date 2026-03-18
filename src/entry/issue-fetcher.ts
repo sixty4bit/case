@@ -42,13 +42,10 @@ export async function fetchIssue(
 export async function fetchGitHubIssue(repoRemote: string, issueNumber: string): Promise<IssueContext> {
   const ownerRepo = extractOwnerRepo(repoRemote);
 
-  const proc = Bun.spawn(
-    ['gh', 'issue', 'view', issueNumber, '--repo', ownerRepo, '--json', 'title,body,labels'],
-    {
-      stdout: 'pipe',
-      stderr: 'pipe',
-    },
-  );
+  const proc = Bun.spawn(['gh', 'issue', 'view', issueNumber, '--repo', ownerRepo, '--json', 'title,body,labels'], {
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
 
   const stdout = await new Response(proc.stdout).text();
   const stderr = await new Response(proc.stderr).text();
@@ -81,11 +78,8 @@ export async function fetchLinearIssue(issueId: string): Promise<IssueContext> {
   const apiKey = await readLinearApiKey();
 
   if (!apiKey) {
-    throw new Error(
-      `LINEAR_API_KEY not found in ${CREDENTIALS_PATH}. Add a line: LINEAR_API_KEY=lin_api_...`,
-    );
+    throw new Error(`LINEAR_API_KEY not found in ${CREDENTIALS_PATH}. Add a line: LINEAR_API_KEY=lin_api_...`);
   }
-
 
   const query = `
     query IssueById($id: String!) {

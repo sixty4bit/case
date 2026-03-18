@@ -1,6 +1,5 @@
 import { Type } from '@sinclair/typebox';
-import type { ToolDefinition, ExtensionContext } from '@mariozechner/pi-coding-agent';
-import type { AgentToolUpdateCallback } from '@mariozechner/pi-agent-core';
+import type { ToolDefinition } from '@mariozechner/pi-coding-agent';
 import { runPipeline } from '../../pipeline.js';
 import { buildPipelineConfig } from '../../config.js';
 

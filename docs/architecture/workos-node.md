@@ -27,11 +27,11 @@ WorkOS (src/workos.ts)                      ← root client, holds HttpClient + 
 
 Three construction modes via `new WorkOS()` or `createWorkOS()` factory:
 
-| Mode | Input | Use case |
-|---|---|---|
-| API key only | `new WorkOS('sk_...')` | Server-side |
-| Confidential | `new WorkOS({ apiKey, clientId })` | Server-side + OAuth |
-| Public/PKCE | `new WorkOS({ clientId })` | Client-side PKCE flows |
+| Mode         | Input                              | Use case               |
+| ------------ | ---------------------------------- | ---------------------- |
+| API key only | `new WorkOS('sk_...')`             | Server-side            |
+| Confidential | `new WorkOS({ apiKey, clientId })` | Server-side + OAuth    |
+| Public/PKCE  | `new WorkOS({ clientId })`         | Client-side PKCE flows |
 
 The factory (`src/factory.ts`) returns typed `PublicWorkOS` or full `WorkOS` depending on whether an API key is provided. Constructor reads `WORKOS_API_KEY` and `WORKOS_CLIENT_ID` from env as fallback; the factory does not.
 
@@ -54,14 +54,15 @@ Domains include: `sso`, `user-management`, `directory-sync`, `organizations`, `o
 
 `src/common/net/` — fetch-based with retry logic.
 
-| Class | Purpose |
-|---|---|
+| Class                   | Purpose                       |
+| ----------------------- | ----------------------------- |
 | `HttpClient` (abstract) | Interface for HTTP operations |
-| `FetchHttpClient` | Concrete fetch implementation |
-| `HttpClientResponse` | Response wrapper |
-| `HttpClientError` | Typed error wrapper |
+| `FetchHttpClient`       | Concrete fetch implementation |
+| `HttpClientResponse`    | Response wrapper              |
+| `HttpClientError`       | Typed error wrapper           |
 
 **Retry behavior** (specific paths only: `/fga/*`, `/vault/*`, `/audit_logs/events`):
+
 - Max 3 attempts, exponential backoff (1.5× multiplier, 500ms base, randomized jitter 0.5–1.5×)
 - Retries on: `TypeError`, HTTP 408/500/502/504
 - Default timeout: 60s per request (AbortController-based)
@@ -134,10 +135,10 @@ Request-related exceptions implement `RequestException` interface (`status`, `me
 
 Two entry points with conditional `package.json` exports:
 
-| Entry | File | Runtime |
-|---|---|---|
-| Default | `src/index.ts` | Node.js (uses `process` warnings) |
-| Worker | `src/index.worker.ts` | Cloudflare Workers, Vercel Edge, Deno |
+| Entry   | File                  | Runtime                               |
+| ------- | --------------------- | ------------------------------------- |
+| Default | `src/index.ts`        | Node.js (uses `process` warnings)     |
+| Worker  | `src/index.worker.ts` | Cloudflare Workers, Vercel Edge, Deno |
 
 ```json
 "exports": {
@@ -157,6 +158,7 @@ Two entry points with conditional `package.json` exports:
 **Build**: `tsdown` → outputs `.cjs`, `.mjs`, `.d.cts` to `lib/`. Inlines `jose`, `iron-webcrypto`, `uint8array-extras`.
 
 **Test**: Jest with `jest-fetch-mock`. Per-module specs use helpers from `src/common/utils/test-utils.ts`:
+
 - `fetchOnce(response)` — mock next fetch
 - `fetchURL()`, `fetchBody()`, `fetchHeaders()`, `fetchSearchParams()` — assert request shape
 
@@ -164,14 +166,14 @@ Two entry points with conditional `package.json` exports:
 
 ## Key Files
 
-| File | Purpose |
-|---|---|
-| `src/index.ts` | Main exports (Node.js) |
-| `src/index.worker.ts` | Worker/edge exports |
-| `src/workos.ts` | Root `WorkOS` class, HTTP methods, module init |
-| `src/factory.ts` | Type-safe `createWorkOS()` factory |
-| `src/common/net/` | HTTP client + retry logic |
-| `src/common/crypto/` | Crypto abstraction |
-| `src/common/exceptions/` | Error hierarchy |
-| `src/common/serializers/` | Shared serialization (pagination, lists) |
-| `src/common/utils/test-utils.ts` | Jest fetch mock helpers |
+| File                             | Purpose                                        |
+| -------------------------------- | ---------------------------------------------- |
+| `src/index.ts`                   | Main exports (Node.js)                         |
+| `src/index.worker.ts`            | Worker/edge exports                            |
+| `src/workos.ts`                  | Root `WorkOS` class, HTTP methods, module init |
+| `src/factory.ts`                 | Type-safe `createWorkOS()` factory             |
+| `src/common/net/`                | HTTP client + retry logic                      |
+| `src/common/crypto/`             | Crypto abstraction                             |
+| `src/common/exceptions/`         | Error hierarchy                                |
+| `src/common/serializers/`        | Shared serialization (pagination, lists)       |
+| `src/common/utils/test-utils.ts` | Jest fetch mock helpers                        |

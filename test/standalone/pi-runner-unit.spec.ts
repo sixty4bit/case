@@ -19,10 +19,16 @@ mock.module('@mariozechner/pi-agent-core', () => ({
     constructor() {}
     subscribe(fn: (e: AgentEvent) => void) {
       mockSubscriber = fn;
-      return () => { mockSubscriber = null; };
+      return () => {
+        mockSubscriber = null;
+      };
     }
-    prompt(...args: any[]) { return mockPromptFn(...args); }
-    abort() { return mockAbortFn(); }
+    prompt(...args: any[]) {
+      return mockPromptFn(...args);
+    }
+    abort() {
+      return mockAbortFn();
+    }
   },
 }));
 
@@ -38,7 +44,9 @@ mock.module('@mariozechner/pi-coding-agent', () => ({
   AuthStorage: { create: () => ({}) },
   ModelRegistry: class MockModelRegistry {
     constructor() {}
-    find() { return { id: 'mock-model', provider: 'anthropic' }; }
+    find() {
+      return { id: 'mock-model', provider: 'anthropic' };
+    }
   },
 }));
 
@@ -73,7 +81,15 @@ const VALID_AGENT_RESULT = [
   JSON.stringify({
     status: 'completed',
     summary: 'Done',
-    artifacts: { commit: 'abc123', filesChanged: ['a.ts'], testsPassed: true, screenshotUrls: [], evidenceMarkers: [], prUrl: null, prNumber: null },
+    artifacts: {
+      commit: 'abc123',
+      filesChanged: ['a.ts'],
+      testsPassed: true,
+      screenshotUrls: [],
+      evidenceMarkers: [],
+      prUrl: null,
+      prNumber: null,
+    },
     error: null,
   }),
   'AGENT_RESULT>>>',

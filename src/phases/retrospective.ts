@@ -65,7 +65,13 @@ export async function runRetrospectivePhase(
   ].join('\n');
 
   try {
-    await spawnAgent({ prompt, cwd: config.repoPath, agentName: 'retrospective', caseRoot: config.caseRoot, onHeartbeat: config.onAgentHeartbeat });
+    await spawnAgent({
+      prompt,
+      cwd: config.repoPath,
+      agentName: 'retrospective',
+      caseRoot: config.caseRoot,
+      onHeartbeat: config.onAgentHeartbeat,
+    });
     log.phase('retrospective', 'completed');
   } catch (err) {
     log.error('retrospective agent failed', { error: String(err) });

@@ -21,7 +21,10 @@ let originalConfigExists = false;
 async function freshImport() {
   // Bust module cache by using dynamic import with unique query
   const mod = await import(`../agent/config.js?t=${Date.now()}`);
-  return mod as { loadConfig: typeof import('../agent/config.js').loadConfig; getModelForAgent: typeof import('../agent/config.js').getModelForAgent };
+  return mod as {
+    loadConfig: typeof import('../agent/config.js').loadConfig;
+    getModelForAgent: typeof import('../agent/config.js').getModelForAgent;
+  };
 }
 
 // Actually, bun module caching means we can just import once and

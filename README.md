@@ -55,14 +55,14 @@ All agents run as [Pi](https://github.com/nicknisi/pi) sessions — the orchestr
 
 ### The Agents
 
-| Agent             | Responsibility                                                                    | Never does                     |
-| ----------------- | --------------------------------------------------------------------------------- | ------------------------------ |
-| **Orchestrator**  | Parse issue, create task, smoke test, dispatch agents                             | Write code, run Playwright     |
-| **Implementer**   | Write fix, run unit tests, commit (with WIP checkpoints), read repo learnings     | Start example apps, create PRs |
-| **Verifier**      | Test the specific fix with Playwright, create evidence                            | Edit code, commit              |
-| **Reviewer**      | Review diff against golden principles, classify findings, gate PR creation        | Edit code, commit, run tests   |
-| **Closer**        | Create PR with thorough description, satisfy hooks, post review comments          | Edit code, run tests           |
-| **Retrospective** | Analyze the run, propose harness improvements, apply per-repo learnings directly  | Edit target repo code          |
+| Agent             | Responsibility                                                                   | Never does                     |
+| ----------------- | -------------------------------------------------------------------------------- | ------------------------------ |
+| **Orchestrator**  | Parse issue, create task, smoke test, dispatch agents                            | Write code, run Playwright     |
+| **Implementer**   | Write fix, run unit tests, commit (with WIP checkpoints), read repo learnings    | Start example apps, create PRs |
+| **Verifier**      | Test the specific fix with Playwright, create evidence                           | Edit code, commit              |
+| **Reviewer**      | Review diff against golden principles, classify findings, gate PR creation       | Edit code, commit, run tests   |
+| **Closer**        | Create PR with thorough description, satisfy hooks, post review comments         | Edit code, run tests           |
+| **Retrospective** | Analyze the run, propose harness improvements, apply per-repo learnings directly | Edit target repo code          |
 
 ## Programmatic Orchestrator
 

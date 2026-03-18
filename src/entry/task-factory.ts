@@ -103,11 +103,7 @@ function buildTaskMarkdown(request: TaskCreateRequest, taskJson: TaskJson, issue
 
   // Issue reference section when enriched
   if (issueContext) {
-    lines.push(
-      '## Issue Reference',
-      '',
-      `**Source:** ${issueContext.issueType} #${issueContext.issueNumber}`,
-    );
+    lines.push('## Issue Reference', '', `**Source:** ${issueContext.issueType} #${issueContext.issueNumber}`);
     if (issueContext.labels.length > 0) {
       lines.push(`**Labels:** ${issueContext.labels.join(', ')}`);
     }

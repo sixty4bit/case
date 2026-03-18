@@ -60,10 +60,7 @@ export async function findTaskByIssue(
  *
  * Handles stale markers (>24h) and missing task files by cleaning up.
  */
-export async function findTaskByMarker(
-  caseRoot: string,
-  repoPath: string,
-): Promise<TaskMatch | null> {
+export async function findTaskByMarker(caseRoot: string, repoPath: string): Promise<TaskMatch | null> {
   const markerPath = resolve(repoPath, '.case-active');
 
   // Check if marker exists

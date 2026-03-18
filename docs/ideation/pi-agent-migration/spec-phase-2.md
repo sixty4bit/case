@@ -23,20 +23,20 @@ Sub-agents are spawned by the orchestrator as Pi batch sessions (using Phase 1's
 
 ### New Files
 
-| File Path | Purpose |
-|---|---|
-| `src/agent/orchestrator-session.ts` | Interactive Pi session for the orchestrator — system prompt, tools, session management |
-| `src/agent/tools/pipeline-tool.ts` | Pi tool that runs the case pipeline (the orchestrator invokes this) |
-| `src/agent/tools/issue-tool.ts` | Pi tool for fetching issues (GitHub, Linear) |
-| `src/agent/tools/task-tool.ts` | Pi tool for creating/resuming tasks |
-| `src/agent/tools/baseline-tool.ts` | Pi tool for running bootstrap.sh |
-| `src/__tests__/orchestrator-session.spec.ts` | Tests for session setup, tool registration |
+| File Path                                    | Purpose                                                                                |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `src/agent/orchestrator-session.ts`          | Interactive Pi session for the orchestrator — system prompt, tools, session management |
+| `src/agent/tools/pipeline-tool.ts`           | Pi tool that runs the case pipeline (the orchestrator invokes this)                    |
+| `src/agent/tools/issue-tool.ts`              | Pi tool for fetching issues (GitHub, Linear)                                           |
+| `src/agent/tools/task-tool.ts`               | Pi tool for creating/resuming tasks                                                    |
+| `src/agent/tools/baseline-tool.ts`           | Pi tool for running bootstrap.sh                                                       |
+| `src/__tests__/orchestrator-session.spec.ts` | Tests for session setup, tool registration                                             |
 
 ### Modified Files
 
-| File Path | Changes |
-|---|---|
-| `src/index.ts` | Add `--agent` flag, route to `startOrchestratorSession()` |
+| File Path                       | Changes                                                                       |
+| ------------------------------- | ----------------------------------------------------------------------------- |
+| `src/index.ts`                  | Add `--agent` flag, route to `startOrchestratorSession()`                     |
 | `src/entry/cli-orchestrator.ts` | Extract pipeline dispatch logic into reusable function that the Pi tool calls |
 
 ## Implementation Details
@@ -47,19 +47,25 @@ Sub-agents are spawned by the orchestrator as Pi batch sessions (using Phase 1's
 
 ```typescript
 import {
-  createAgentSession, InteractiveMode, SessionManager, AuthStorage, ModelRegistry,
-  DefaultResourceLoader, SettingsManager, getAgentDir,
-} from "@mariozechner/pi-coding-agent";
-import type { ToolDefinition } from "@mariozechner/pi-coding-agent";
-import { createPipelineTool } from "./tools/pipeline-tool.js";
-import { createIssueTool } from "./tools/issue-tool.js";
-import { createTaskTool } from "./tools/task-tool.js";
-import { createBaselineTool } from "./tools/baseline-tool.js";
+  createAgentSession,
+  InteractiveMode,
+  SessionManager,
+  AuthStorage,
+  ModelRegistry,
+  DefaultResourceLoader,
+  SettingsManager,
+  getAgentDir,
+} from '@mariozechner/pi-coding-agent';
+import type { ToolDefinition } from '@mariozechner/pi-coding-agent';
+import { createPipelineTool } from './tools/pipeline-tool.js';
+import { createIssueTool } from './tools/issue-tool.js';
+import { createTaskTool } from './tools/task-tool.js';
+import { createBaselineTool } from './tools/baseline-tool.js';
 
 export async function startOrchestratorSession(options: {
   caseRoot: string;
   argument?: string;
-  mode: "attended";
+  mode: 'attended';
 }): Promise<void> {
   const authStorage = AuthStorage.create();
   const modelRegistry = new ModelRegistry(authStorage);
@@ -102,6 +108,7 @@ export async function startOrchestratorSession(options: {
 ```
 
 **Key decisions**:
+
 - Use `createAgentSession` (Layer 3) for full session persistence and built-in coding tools
 - Use `InteractiveMode` for Pi's TUI — it handles the conversation loop, input, rendering, and keybindings
 - System prompt is customized via `DefaultResourceLoader({ appendSystemPrompt })` — there is no `systemPromptAppend` option on `createAgentSession` directly
@@ -111,6 +118,7 @@ export async function startOrchestratorSession(options: {
 - If no argument, the session opens for freeform conversation
 
 **Implementation steps**:
+
 1. Create the session factory function
 2. Set up `DefaultResourceLoader` with `appendSystemPrompt` for case-specific context (AGENTS.md + golden principles, trimmed for token efficiency)
 3. Register custom tools as `ToolDefinition[]`
@@ -122,36 +130,36 @@ export async function startOrchestratorSession(options: {
 **Overview**: A Pi tool the orchestrator calls to run the case pipeline. This is where the existing `runPipeline()` function connects to the interactive session.
 
 ```typescript
-import { Type } from "@sinclair/typebox";
-import type { ToolDefinition, ExtensionContext } from "@mariozechner/pi-coding-agent";
-import type { AgentToolUpdateCallback } from "@mariozechner/pi-agent-core";
-import { runPipeline } from "../../pipeline.js";
-import { buildPipelineConfig } from "../../config.js";
+import { Type } from '@sinclair/typebox';
+import type { ToolDefinition, ExtensionContext } from '@mariozechner/pi-coding-agent';
+import type { AgentToolUpdateCallback } from '@mariozechner/pi-agent-core';
+import { runPipeline } from '../../pipeline.js';
+import { buildPipelineConfig } from '../../config.js';
 
 const pipelineParams = Type.Object({
-  taskJsonPath: Type.String({ description: "Path to the .task.json file" }),
-  mode: Type.Optional(Type.String({ description: "attended or unattended" })),
-  dryRun: Type.Optional(Type.Boolean({ description: "Skip agent spawning" })),
+  taskJsonPath: Type.String({ description: 'Path to the .task.json file' }),
+  mode: Type.Optional(Type.String({ description: 'attended or unattended' })),
+  dryRun: Type.Optional(Type.Boolean({ description: 'Skip agent spawning' })),
 });
 
 export function createPipelineTool(caseRoot: string): ToolDefinition<typeof pipelineParams> {
   return {
-    name: "run_pipeline",
-    label: "Pipeline",
-    description: "Run the case agent pipeline (implement → verify → review → close → retrospective) for a task",
-    promptSnippet: "Run the case pipeline for a task file",
+    name: 'run_pipeline',
+    label: 'Pipeline',
+    description: 'Run the case agent pipeline (implement → verify → review → close → retrospective) for a task',
+    promptSnippet: 'Run the case pipeline for a task file',
     parameters: pipelineParams,
     execute: async (toolCallId, params, signal, onUpdate, ctx) => {
       const config = await buildPipelineConfig({
         taskJsonPath: params.taskJsonPath,
-        mode: (params.mode as "attended" | "unattended") ?? "attended",
+        mode: (params.mode as 'attended' | 'unattended') ?? 'attended',
         dryRun: params.dryRun ?? false,
       });
 
       // Stream progress updates to the orchestrator via AgentToolResult shape
       config.onAgentHeartbeat = (elapsedMs) => {
         onUpdate?.({
-          content: [{ type: "text", text: `... still running (${Math.floor(elapsedMs / 1000)}s)\n` }],
+          content: [{ type: 'text', text: `... still running (${Math.floor(elapsedMs / 1000)}s)\n` }],
           details: { taskJsonPath: params.taskJsonPath },
         });
       };
@@ -159,7 +167,7 @@ export function createPipelineTool(caseRoot: string): ToolDefinition<typeof pipe
       await runPipeline(config);
 
       return {
-        content: [{ type: "text", text: "Pipeline completed successfully." }],
+        content: [{ type: 'text', text: 'Pipeline completed successfully.' }],
         details: { taskJsonPath: params.taskJsonPath },
       };
     },
@@ -168,6 +176,7 @@ export function createPipelineTool(caseRoot: string): ToolDefinition<typeof pipe
 ```
 
 **Key decisions**:
+
 - Tools use `ToolDefinition` (from `pi-coding-agent`), not `AgentTool` (from `pi-agent-core`). `ToolDefinition.execute` has an extra `ctx: ExtensionContext` parameter and supports `promptSnippet`/`promptGuidelines` for system prompt integration
 - The pipeline runs in-process (not a subprocess) — the orchestrator's Pi session calls `runPipeline()` directly
 - Sub-agents within the pipeline are still spawned as separate Pi batch sessions (Phase 1's `spawnAgent`)
@@ -179,26 +188,26 @@ export function createPipelineTool(caseRoot: string): ToolDefinition<typeof pipe
 **Overview**: Lets the orchestrator fetch issue context from GitHub or Linear.
 
 ```typescript
-import { Type } from "@sinclair/typebox";
-import type { ToolDefinition } from "@mariozechner/pi-coding-agent";
+import { Type } from '@sinclair/typebox';
+import type { ToolDefinition } from '@mariozechner/pi-coding-agent';
 
 const issueParams = Type.Object({
-  source: Type.Union([Type.Literal("github"), Type.Literal("linear"), Type.Literal("freeform")]),
-  identifier: Type.String({ description: "Issue number, Linear ID, or freeform text" }),
-  repoRemote: Type.Optional(Type.String({ description: "Git remote URL for GitHub issues" })),
+  source: Type.Union([Type.Literal('github'), Type.Literal('linear'), Type.Literal('freeform')]),
+  identifier: Type.String({ description: 'Issue number, Linear ID, or freeform text' }),
+  repoRemote: Type.Optional(Type.String({ description: 'Git remote URL for GitHub issues' })),
 });
 
 export function createIssueTool(caseRoot: string): ToolDefinition<typeof issueParams> {
   return {
-    name: "fetch_issue",
-    label: "Issue",
-    description: "Fetch issue details from GitHub, Linear, or create from freeform text",
-    promptSnippet: "Fetch issue details from GitHub or Linear",
+    name: 'fetch_issue',
+    label: 'Issue',
+    description: 'Fetch issue details from GitHub, Linear, or create from freeform text',
+    promptSnippet: 'Fetch issue details from GitHub or Linear',
     parameters: issueParams,
     execute: async (toolCallId, params, signal, onUpdate, ctx) => {
       const context = await fetchIssue(params.source, params.identifier, params.repoRemote);
       return {
-        content: [{ type: "text", text: `**${context.title}**\n\n${context.body}` }],
+        content: [{ type: 'text', text: `**${context.title}**\n\n${context.body}` }],
         details: context,
       };
     },
@@ -231,6 +240,7 @@ if (values.agent) {
 ```
 
 **Key decisions**:
+
 - `--agent` is always attended mode (interactive by definition)
 - `--agent` without an argument opens a freeform session
 - `--agent 1234` opens a session and immediately prompts with the issue
@@ -241,6 +251,7 @@ if (values.agent) {
 **Overview**: The system prompt that makes the Pi session act as the case orchestrator. Loaded from a new file or built programmatically.
 
 The prompt should:
+
 - Explain the case harness and pipeline
 - Describe available tools (pipeline, issue, task, baseline)
 - Explain when to run the pipeline vs have a discussion
@@ -248,6 +259,7 @@ The prompt should:
 - Be concise — Pi's philosophy is minimal system prompts (~200 tokens base, we add case context on top)
 
 **Key decisions**:
+
 - Keep it under 1000 tokens (Pi's base is ~200, we add ~800 of case context)
 - Reference external docs by tool (the agent can `read` files) rather than inlining everything
 - The prompt should make it natural to both discuss AND execute
@@ -256,12 +268,13 @@ The prompt should:
 
 ### Unit Tests
 
-| Test File | Coverage |
-|---|---|
-| `src/__tests__/orchestrator-session.spec.ts` | Session creation, tool registration, argument handling |
-| `src/__tests__/pipeline-tool.spec.ts` | Pipeline tool execution, progress streaming, error handling |
+| Test File                                    | Coverage                                                    |
+| -------------------------------------------- | ----------------------------------------------------------- |
+| `src/__tests__/orchestrator-session.spec.ts` | Session creation, tool registration, argument handling      |
+| `src/__tests__/pipeline-tool.spec.ts`        | Pipeline tool execution, progress streaming, error handling |
 
 **Key test cases**:
+
 - Session creates with all custom tools registered
 - Pipeline tool calls `runPipeline` with correct config
 - Issue tool returns normalized `IssueContext`
@@ -277,13 +290,13 @@ The prompt should:
 
 ## Error Handling
 
-| Error Scenario | Handling Strategy |
-|---|---|
-| Pi not installed | `startOrchestratorSession` checks for package, prints install instructions |
-| No API key | Pi's `AuthStorage` prompts interactively (built-in behavior) |
+| Error Scenario                | Handling Strategy                                                             |
+| ----------------------------- | ----------------------------------------------------------------------------- |
+| Pi not installed              | `startOrchestratorSession` checks for package, prints install instructions    |
+| No API key                    | Pi's `AuthStorage` prompts interactively (built-in behavior)                  |
 | Pipeline fails during session | Error surfaces in the conversation — agent can explain and suggest next steps |
-| User interrupt (Ctrl+C) | Pi handles gracefully — session is saved, can be resumed |
-| Session persistence fails | Fall back to in-memory session with warning |
+| User interrupt (Ctrl+C)       | Pi handles gracefully — session is saved, can be resumed                      |
+| Session persistence fails     | Fall back to in-memory session with warning                                   |
 
 ## Validation Commands
 
