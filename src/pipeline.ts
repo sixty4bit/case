@@ -180,7 +180,6 @@ export async function runPipeline(config: PipelineConfig): Promise<void> {
 
       case 'retrospective': {
         metrics.startPhase('retrospective', 'retrospective');
-        notifier.phaseStart(currentPhase, 'retrospective');
         const retroStart = Date.now();
         await runRetrospectivePhase(config, store, previousResults, outcome, failedAgent);
         notifier.phaseEnd(currentPhase, 'retrospective', Date.now() - retroStart, 'completed');
