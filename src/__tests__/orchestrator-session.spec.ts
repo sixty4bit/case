@@ -13,6 +13,12 @@ const mockCreateAgentSession = mock();
 const mockInteractiveModeRun = mock();
 const mockResourceLoaderReload = mock();
 
+// Mock config module to avoid filesystem reads
+mock.module('../agent/config.js', () => ({
+  getModelForAgent: async () => ({ provider: 'anthropic', model: 'claude-sonnet-4-20250514' }),
+  loadConfig: async () => ({}),
+}));
+
 mock.module('@mariozechner/pi-coding-agent', () => ({
   createAgentSession: mockCreateAgentSession,
   InteractiveMode: class MockInteractiveMode {
@@ -37,7 +43,12 @@ mock.module('@mariozechner/pi-coding-agent', () => ({
   },
   SettingsManager: { create: () => ({}) },
   AuthStorage: { create: () => ({}) },
-  ModelRegistry: class { constructor() {} },
+  ModelRegistry: class {
+    constructor() {}
+    find() {
+      return { id: 'mock-model' };
+    }
+  },
   getAgentDir: () => '/tmp/pi-agent',
 }));
 

@@ -102,6 +102,11 @@ export interface PhaseOutput {
   nextPhase: PipelinePhase;
 }
 
+export interface AgentModelConfig {
+  provider: string;
+  model: string;
+}
+
 export interface SpawnAgentOptions {
   prompt: string;
   cwd: string;

@@ -3,9 +3,10 @@ import { streamSimple } from '@mariozechner/pi-ai';
 import { AuthStorage, ModelRegistry } from '@mariozechner/pi-coding-agent';
 import { getToolsForAgent } from './tool-sets.js';
 import { loadSystemPrompt } from './prompt-loader.js';
+import { getModelForAgent } from './config.js';
 import { parseAgentResult } from '../util/parse-agent-result.js';
 import { createLogger } from '../util/logger.js';
-import type { SpawnAgentOptions, SpawnAgentResult } from '../types.js';
+import type { AgentModelConfig, SpawnAgentOptions, SpawnAgentResult } from '../types.js';
 
 const log = createLogger();
 
@@ -17,18 +18,28 @@ export async function spawnAgent(options: SpawnAgentOptions): Promise<SpawnAgent
 
   const systemPrompt = await loadSystemPrompt(options.caseRoot, options.agentName);
   const tools = getToolsForAgent(options.agentName, options.cwd);
-  const provider = options.provider ?? 'anthropic';
-  const modelId = options.model ?? 'claude-sonnet-4-20250514';
-  const model = registry.find(provider, modelId);
+
+  // Priority: CLI --model override (env var) > explicit options > config file > defaults
+  const modelOverride = process.env.CASE_MODEL_OVERRIDE;
+  let modelConfig: AgentModelConfig;
+  if (options.model) {
+    modelConfig = { provider: options.provider ?? 'anthropic', model: options.model };
+  } else if (modelOverride) {
+    modelConfig = { provider: options.provider ?? 'anthropic', model: modelOverride };
+  } else {
+    modelConfig = await getModelForAgent(options.agentName);
+  }
+
+  const model = registry.find(modelConfig.provider, modelConfig.model);
   if (!model) {
-    throw new Error(`Model not found: ${provider}/${modelId}`);
+    throw new Error(`Model not found: ${modelConfig.provider}/${modelConfig.model}. Check ~/.config/case/config.json`);
   }
 
   log.info('spawning agent', {
     agent: options.agentName,
     cwd: options.cwd,
-    provider: options.provider ?? 'anthropic',
-    model: options.model ?? 'claude-sonnet-4-20250514',
+    provider: modelConfig.provider,
+    model: modelConfig.model,
     timeout,
   });
 

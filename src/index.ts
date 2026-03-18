@@ -21,6 +21,7 @@ async function main() {
       host: { type: 'string' },
       'webhook-secret': { type: 'string' },
       agent: { type: 'boolean' },
+      model: { type: 'string' },
       'dry-run': { type: 'boolean' },
       fresh: { type: 'boolean' },
       help: { type: 'boolean', short: 'h' },
@@ -37,6 +38,11 @@ async function main() {
   if (values.help) {
     printUsage();
     process.exit(0);
+  }
+
+  // --model flag: override model for all agents in this run
+  if (values.model) {
+    process.env.CASE_MODEL_OVERRIDE = values.model as string;
   }
 
   const command = positionals[0] ?? 'run';
@@ -255,6 +261,7 @@ Agent options:
 Run options:
   --task, -t <path>         Path to .task.json file (skips Steps 0-3)
   --mode, -m <mode>         attended | unattended (default: attended)
+  --model <id>              Override model for all agents (e.g., claude-opus-4-5)
   --dry-run                 Log phase transitions without spawning agents
   --fresh                   Skip re-entry detection, create a new task from scratch
 

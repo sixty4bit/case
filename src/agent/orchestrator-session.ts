@@ -8,6 +8,7 @@ import {
   getAgentDir,
 } from '@mariozechner/pi-coding-agent';
 import type { ToolDefinition } from '@mariozechner/pi-coding-agent';
+import { getModelForAgent } from './config.js';
 import { createPipelineTool } from './tools/pipeline-tool.js';
 import { createIssueTool } from './tools/issue-tool.js';
 import { createTaskTool } from './tools/task-tool.js';
@@ -22,6 +23,15 @@ export interface OrchestratorSessionOptions {
 export async function startOrchestratorSession(options: OrchestratorSessionOptions): Promise<void> {
   const cwd = process.cwd();
   const agentDir = getAgentDir();
+  const authStorage = AuthStorage.create();
+  const modelRegistry = new ModelRegistry(authStorage);
+
+  // Resolve model: CLI override (env var) > config file > Pi defaults
+  const modelOverride = process.env.CASE_MODEL_OVERRIDE;
+  const modelConfig = modelOverride
+    ? { provider: 'anthropic', model: modelOverride }
+    : await getModelForAgent('orchestrator');
+  const model = modelRegistry.find(modelConfig.provider, modelConfig.model);
 
   const resourceLoader = new DefaultResourceLoader({
     cwd,
@@ -34,8 +44,9 @@ export async function startOrchestratorSession(options: OrchestratorSessionOptio
   const { session, modelFallbackMessage } = await createAgentSession({
     cwd,
     agentDir,
-    authStorage: AuthStorage.create(),
-    modelRegistry: new ModelRegistry(AuthStorage.create()),
+    authStorage,
+    modelRegistry,
+    model: model ?? undefined,
     resourceLoader,
     customTools: [
       createPipelineTool(options.caseRoot),
