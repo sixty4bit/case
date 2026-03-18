@@ -49,13 +49,7 @@ async function main() {
     // `bun src/index.ts 1234` or `bun src/index.ts run 1234`
     const argument = command === 'run' ? positionals[1] : positionals[0];
 
-    if (!argument) {
-      // No argument and no --task = future re-entry mode (Phase 2)
-      process.stderr.write('Error: provide an issue number, Linear ID, or --task <path>\n');
-      printUsage();
-      process.exit(1);
-    }
-
+    // argument may be undefined for re-entry via .case-active
     const mode = values.mode as PipelineMode | undefined;
     if (mode && mode !== 'attended' && mode !== 'unattended') {
       process.stderr.write('Error: --mode must be "attended" or "unattended"\n');
@@ -66,7 +60,7 @@ async function main() {
 
     try {
       await runCliOrchestrator({
-        argument,
+        argument: argument || undefined,
         mode: mode ?? 'attended',
         dryRun: (values['dry-run'] as boolean) ?? false,
         caseRoot,
@@ -216,12 +210,13 @@ async function runServe(values: Record<string, unknown>) {
 function printUsage() {
   process.stdout.write(`
 Usage:
-  bun src/index.ts <issue>  [options]               Detect repo, fetch issue, run pipeline
+  bun src/index.ts [<issue>] [options]              Detect repo, fetch issue, run pipeline
   bun src/index.ts [run] --task <path> [options]    Run pipeline for an existing task
   bun src/index.ts create [options]                 Create a new task
   bun src/index.ts serve [options]                  Start as HTTP service
 
 Standalone CLI (run from a target repo):
+  (no argument)               Resume active task via .case-active marker
   <issue>                     GitHub issue number (e.g., 1234)
                               Linear ID (e.g., DX-1234)
                               Freeform text (quoted, e.g., "fix login bug")

@@ -1,17 +1,19 @@
 import { resolve } from 'node:path';
 import { detectRepo } from './repo-detector.js';
 import { detectArgumentType, fetchIssue } from './issue-fetcher.js';
+import { findTaskByIssue, findTaskByMarker } from './task-scanner.js';
 import { createTask } from './task-factory.js';
 import { buildPipelineConfig } from '../config.js';
 import { runPipeline } from '../pipeline.js';
 import { runScript } from '../util/run-script.js';
 import { createLogger } from '../util/logger.js';
 import type { IssueContext, PipelineMode, TaskCreateRequest } from '../types.js';
+import type { TaskMatch } from './task-scanner.js';
 
 const log = createLogger();
 
 export interface CliOrchestratorOptions {
-  /** Issue number, Linear ID, or free text. Undefined = re-entry (Phase 2). */
+  /** Issue number, Linear ID, or free text. Undefined = re-entry via .case-active. */
   argument?: string;
   mode: PipelineMode;
   dryRun: boolean;
@@ -23,6 +25,7 @@ export interface CliOrchestratorOptions {
  *
  * Flow:
  *   0. Detect repo from cwd
+ *   0b. Check for existing task (re-entry)
  *   1. Fetch issue context
  *   2. Derive branch, create task files
  *   3. Run baseline (bootstrap.sh)
@@ -36,20 +39,32 @@ export async function runCliOrchestrator(options: CliOrchestratorOptions): Promi
   const detected = await detectRepo(caseRoot);
   process.stdout.write(`  Repo: ${detected.name} (${detected.path})\n`);
 
-  // --- Step 1: Fetch issue context ---
-  let issueContext: IssueContext | undefined;
+  // --- Step 0b: Check for existing task (re-entry) ---
+  let match: TaskMatch | null = null;
 
   if (argument) {
     const argType = detectArgumentType(argument);
-    process.stdout.write(`  Issue type: ${argType} (${argument})\n`);
-
-    issueContext = await fetchIssue(argType, argument, detected.project.remote);
-    process.stdout.write(`  Issue: ${issueContext.title}\n`);
+    match = await findTaskByIssue(caseRoot, detected.name, argType, argument);
   } else {
-    // No argument = re-entry mode (Phase 2 stub)
-    process.stderr.write('Error: no issue argument provided. Re-entry mode is not yet implemented.\n');
-    process.exit(1);
+    match = await findTaskByMarker(caseRoot, detected.path);
   }
+
+  if (match) {
+    return resumeTask(match, detected.path, mode, dryRun);
+  }
+
+  // No existing task found — create new or exit
+  if (!argument) {
+    process.stdout.write('No active task found. Usage: bun src/index.ts <issue-number>\n');
+    return;
+  }
+
+  // --- Step 1: Fetch issue context ---
+  const argType = detectArgumentType(argument);
+  process.stdout.write(`  Issue type: ${argType} (${argument})\n`);
+
+  const issueContext: IssueContext = await fetchIssue(argType, argument, detected.project.remote);
+  process.stdout.write(`  Issue: ${issueContext.title}\n`);
 
   // --- Step 2: Create branch + task files ---
   const branchName = deriveBranchName(issueContext);
@@ -102,6 +117,49 @@ export async function runCliOrchestrator(options: CliOrchestratorOptions): Promi
     dryRun,
   });
 
+  await runPipeline(config);
+}
+
+/**
+ * Resume an existing task from the correct pipeline phase.
+ * Handles terminal states (pr-opened, ideation) and branch recovery.
+ */
+async function resumeTask(
+  match: TaskMatch,
+  repoPath: string,
+  mode: PipelineMode,
+  dryRun: boolean,
+): Promise<void> {
+  const { taskJson, taskJsonPath, entryPhase } = match;
+
+  // Guard: task already has a PR open
+  if (taskJson.status === 'pr-opened' || taskJson.status === 'merged') {
+    const prInfo = taskJson.prUrl ? `: ${taskJson.prUrl}` : '';
+    process.stdout.write(`PR already exists${prInfo}. Nothing to do.\n`);
+    return;
+  }
+
+  // Guard: ideation tasks need a different workflow
+  if (taskJson.issueType === 'ideation') {
+    process.stdout.write(`This is an ideation task. Resume with: /case:from-ideation ${taskJsonPath}\n`);
+    return;
+  }
+
+  process.stdout.write(`Resuming task ${taskJson.id} from ${entryPhase} phase\n`);
+
+  // Checkout the task's branch if it has one
+  if (taskJson.branch) {
+    await ensureBranchForResume(taskJson.branch, repoPath);
+  }
+
+  // Build config from existing task JSON and dispatch
+  const config = await buildPipelineConfig({
+    taskJsonPath,
+    mode,
+    dryRun,
+  });
+
+  process.stdout.write('Dispatching to pipeline...\n');
   await runPipeline(config);
 }
 
@@ -171,5 +229,46 @@ async function ensureBranch(branchName: string, repoPath: string): Promise<void>
       throw new Error(`Failed to create branch ${branchName}: ${stderr.trim()}`);
     }
     log.info('created new branch', { branch: branchName });
+  }
+}
+
+/**
+ * Checkout a branch for task resumption.
+ * If the branch exists, check it out. If it was deleted, recreate from HEAD and warn.
+ */
+async function ensureBranchForResume(branchName: string, repoPath: string): Promise<void> {
+  const check = Bun.spawn(['git', 'rev-parse', '--verify', branchName], {
+    cwd: repoPath,
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  const checkExitCode = await check.exited;
+
+  if (checkExitCode === 0) {
+    const co = Bun.spawn(['git', 'checkout', branchName], {
+      cwd: repoPath,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    const exitCode = await co.exited;
+    if (exitCode !== 0) {
+      const stderr = await new Response(co.stderr).text();
+      throw new Error(`Failed to checkout branch ${branchName}: ${stderr.trim()}`);
+    }
+    log.info('checked out existing branch for resume', { branch: branchName });
+  } else {
+    // Branch was deleted — recreate from HEAD
+    process.stdout.write(`  Warning: branch ${branchName} not found, recreating from HEAD\n`);
+    const create = Bun.spawn(['git', 'checkout', '-b', branchName], {
+      cwd: repoPath,
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    const exitCode = await create.exited;
+    if (exitCode !== 0) {
+      const stderr = await new Response(create.stderr).text();
+      throw new Error(`Failed to recreate branch ${branchName}: ${stderr.trim()}`);
+    }
+    log.info('recreated branch from HEAD for resume', { branch: branchName });
   }
 }
