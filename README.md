@@ -211,21 +211,6 @@ graph LR
 
 ## Quick Start
 
-### Install the plugin
-
-```bash
-claude plugin marketplace add /path/to/case
-claude plugin install case
-```
-
-Restart Claude Code after installing. The `/case` skill will be available in all sessions.
-
-To update after changes:
-
-```bash
-claude plugin uninstall case && claude plugin marketplace update && claude plugin install case
-```
-
 ### Use with an issue
 
 From any target repo:
@@ -307,23 +292,13 @@ claude --worktree -p "Execute the task in tasks/active/authkit-nextjs-1-fix-cook
 
 ## Enforcement
 
-Case uses Claude Code hooks to mechanically enforce the pre-PR checklist. Hooks only activate during `/case` workflows (when `.case-active` marker exists).
-
-| Hook                  | Trigger                  | What it enforces                                                                                                                                                                              |
-| --------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pre-pr-check.sh`     | `gh pr create`           | Evidence-based test markers (not bare `touch`), manual testing evidence if src/ changed, review evidence (`.case-reviewed` with `critical: 0`), verification notes in PR body, feature branch |
-| `pre-push-check.sh`   | `git push`               | Not pushing to main/master                                                                                                                                                                    |
-| `pre-commit-check.sh` | `git commit`             | Conventional commit format                                                                                                                                                                    |
-| `post-pr-cleanup.sh`  | `gh pr create` (after)   | Updates task JSON status to `pr-opened`, cleans up markers                                                                                                                                    |
-| `doom-loop-detect.sh` | Any Bash command (after) | Detects 3+ consecutive identical failures, forces agents to try a different approach                                                                                                          |
-
-Evidence markers are created by scripts that verify work was actually done:
+The pipeline enforces the pre-PR checklist through the closer agent's pre-flight checks and the programmatic orchestrator's phase gates. Evidence markers track that work was actually done:
 
 - `mark-tested.sh` — requires piped test output, records SHA-256 hash. Supports structured JSON reporter input via `parse-test-output.sh`. Rejects bare `touch`.
 - `mark-manual-tested.sh` — requires recent Playwright screenshots. Rejects without evidence.
 - `mark-reviewed.sh` — requires `--critical 0` (no unresolved critical findings from reviewer). Rejects if critical findings exist.
 
-All marker scripts also update the task JSON as a side effect.
+The closer agent verifies all markers exist before attempting `gh pr create`. The pipeline limits retries to prevent doom loops. All marker scripts also update the task JSON as a side effect.
 
 ## Verification Tools
 
@@ -354,7 +329,6 @@ bash scripts/bootstrap.sh cli
 ## What's in the Harness
 
 ```
-.claude-plugin/                     Plugin + marketplace manifests
 skills/
   case/SKILL.md                     /case skill (orchestrator + pipeline)
   security-auditor/SKILL.md         Security audit (auto-invoked, not user-facing)
@@ -364,13 +338,6 @@ agents/
   reviewer.md                       Subagent: diff review against golden principles
   closer.md                         Subagent: PR creation + hook satisfaction + review comments
   retrospective.md                  Subagent: apply harness improvements + maintain learnings
-hooks/
-  hooks.json                        Hook configuration
-  pre-pr-check.sh                   Block PR without evidence markers + review evidence
-  pre-push-check.sh                 Block push to main/master
-  pre-commit-check.sh               Enforce conventional commits
-  post-pr-cleanup.sh                Update task JSON status, clean markers
-  doom-loop-detect.sh               Detect repeated identical failures, break retry loops
 src/                                Programmatic orchestrator (TypeScript)
   index.ts                          CLI entry point (--agent, --model, --task)
   pipeline.ts                       Core while/switch loop (Steps 4-9)

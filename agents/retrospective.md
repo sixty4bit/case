@@ -51,9 +51,9 @@ Check each dimension:
 - Did the verifier fail and trigger a fix-and-retry loop?
 - What did the verifier catch that the implementer missed? Is there a pattern the implementer should have followed?
 
-**Hook blocks**
+**Evidence gates**
 
-- Did the closer get blocked by pre-PR hooks?
+- Did the closer fail pre-flight checks?
 - What evidence was missing? Should the implementer or verifier's instructions be clearer about creating it?
 
 **Missing context**
@@ -77,13 +77,13 @@ For each finding, classify where the fix belongs:
 | Recurring mistake across runs      | `docs/golden-principles.md` | "Add: always check env vars before hardcoding defaults"       |
 | Playbook missing a step            | `docs/playbooks/`           | "Add 'check for custom config' step to fix-bug.md"            |
 | Agent prompt insufficient          | `agents/`                   | "Implementer should read example app .env before starting"    |
-| Hook too strict or too lenient     | `hooks/`                    | "pre-pr-check should also verify build passes"                |
+| Pipeline logic too strict/lenient  | `src/phases/`               | "close phase should also verify build passes"                 |
 | Target repo CLAUDE.md missing info | Target repo's `CLAUDE.md`   | "Add cookie configuration section"                            |
 | No improvement needed              | —                           | Pipeline worked as designed                                   |
 
 ### 4. Propose Amendments (staged, not direct)
 
-**ETH Zurich finding: auto-generated agent instructions hurt performance.** Do NOT edit agent prompts, scripts, hooks, conventions, or golden principles directly. Instead, write proposals to a staging area for human review.
+**ETH Zurich finding: auto-generated agent instructions hurt performance.** Do NOT edit agent prompts, scripts, conventions, or golden principles directly. Instead, write proposals to a staging area for human review.
 
 **Priority guide:**
 
@@ -135,7 +135,7 @@ Filename format: `{YYYY-MM-DD}-{slug}.md` (e.g., `2026-03-14-implementer-esm-rem
 
 - `agents/` — agent prompt changes
 - `scripts/` — harness script changes
-- `hooks/` — hook changes
+- `src/phases/` — pipeline logic changes
 - `skills/` — skill file changes
 - `docs/golden-principles.md` — principle changes
 - `docs/conventions/` — convention changes
@@ -209,7 +209,7 @@ AGENT_RESULT>>>
 ## Rules
 
 - **Propose, don't apply.** Write amendments to `docs/proposed-amendments/`, not direct edits. Exception: repo learnings in `docs/learnings/` can be appended directly.
-- **Target the harness, not the code.** Your improvements go to `case/` docs, scripts, agents, and hooks — not to the target repo's source code.
+- **Target the harness, not the code.** Your improvements go to `case/` docs, scripts, agents, and pipeline code — not to the target repo's source code.
 - **Be precise.** Make proposals with exact diffs or replacement text. Don't propose rewriting entire files when a few lines will do.
 - **Don't invent problems.** If the pipeline worked cleanly, say "no improvements needed." Not every run produces findings.
 - **One proposal per signal.** Don't bundle multiple fixes into one amendment file.

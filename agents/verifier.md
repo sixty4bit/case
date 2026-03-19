@@ -66,7 +66,7 @@ print('app')
 
 - **If `library`**: This is a pure library with no web UI. Skip Playwright (step 3) and go to **step 2b (Library Verification)** instead.
 
-Then check if `src/` files changed (use both HEAD~1 and main to match the pre-PR hook's broader check):
+Then check if `src/` files changed (use both HEAD~1 and main for broad coverage):
 
 ```bash
 git diff --name-only HEAD~1 | grep "^src/" || git diff --name-only main | grep "^src/"

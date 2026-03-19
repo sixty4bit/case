@@ -23,7 +23,7 @@ Case uses a **six-agent pipeline** to prevent context pollution and enable self-
 | **Implementer**        | Write code, run unit tests, commit (with WIP checkpoints), read repo learnings | Read, Edit, Write, Bash, Glob, Grep |
 | **Verifier**           | Manual testing with Playwright, evidence markers, screenshots                  | Read, Bash, Glob, Grep              |
 | **Reviewer**           | Review diff against golden principles, classify findings, gate PR creation     | Read, Bash, Glob, Grep              |
-| **Closer**             | Create PR with thorough description, satisfy hook gates, post review comments  | Read, Bash, Glob, Grep              |
+| **Closer**             | Create PR with thorough description, verify evidence gates, post review comments  | Read, Bash, Glob, Grep              |
 | **Retrospective**      | Propose harness improvements, apply per-repo learnings directly                | Read, Edit, Write, Bash, Glob, Grep |
 
 Agent prompt files: `/Users/nicknisi/Developer/case/agents/{implementer,verifier,reviewer,closer,retrospective}.md`
@@ -280,7 +280,7 @@ Report the failure to user via `AskUserQuestion`:
 4. Parse `AGENT_RESULT` from response
 5. If `status == "failed"`:
    - Check if `src/` files changed: `git diff --name-only main | grep "^src/"`
-   - **If src/ changed** (verification mandatory — hook will block):
+   - **If src/ changed** (verification mandatory — closer must verify):
      Use `AskUserQuestion`: "Verification failed: `<summary>`"
      Options: "Fix and re-verify" | "Abort"
      If "Abort": **go to step 9 (Retrospective)** with outcome "failed" and failed agent "verifier".
@@ -305,7 +305,7 @@ Report the failure to user via `AskUserQuestion`:
      "Reviewer found `<N>` critical finding(s): `<details>`"
      Options: "Re-implement and re-review" | "Override and continue" | "Abort"
      If "Re-implement and re-review": **go to step 4 (Implementer)** to address the findings, then re-run verifier and reviewer.
-     If "Override and continue": continue to step 7 (Closer). Note: the pre-PR hook will still require `.case-reviewed` — the user must manually create the marker or address the findings.
+     If "Override and continue": continue to step 7 (Closer). Note: the closer still requires `.case-reviewed` — the user must manually create the marker or address the findings.
      If "Abort": **go to step 9 (Retrospective)** with outcome "failed" and failed agent "reviewer".
 6. If `status == "completed"` (no critical findings): continue to step 7
 
@@ -558,7 +558,7 @@ Some repos include example apps for end-to-end testing:
 
 ## STOP — Closer Agent Checklist (mandatory)
 
-**The closer agent MUST verify every applicable item below BEFORE running `gh pr create`. The pre-PR hook enforces this mechanically.**
+**The closer agent MUST verify every applicable item below BEFORE running `gh pr create`. The pre-PR the closer verifies this before PR creation.**
 
 The orchestrator spawns the closer, which handles this checklist. If you're the orchestrator, do NOT execute these items yourself — the closer agent does.
 
@@ -575,7 +575,7 @@ The orchestrator spawns the closer, which handles this checklist. If you're the 
 - [ ] **Conventional commit** — implementer used `type(scope): description`
 - [ ] **PR description drafted** — includes: summary, what was tested, verification notes, screenshots, issue link, follow-ups
 
-**The pre-PR hook will BLOCK `gh pr create` if markers are missing. The closer must verify these gates before attempting PR creation.**
+**The closer MUST verify all evidence markers exist before attempting `gh pr create`.**
 
 ## Improving the Harness
 

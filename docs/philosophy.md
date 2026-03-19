@@ -17,9 +17,9 @@ Principles that guide how case is built and used. These come from experience, fr
 
 ## Enforcement
 
-- **Instructions decay, enforcement persists.** Agents forget instructions over long sessions. Hooks and linters don't forget.
-- **Human taste is captured once, enforced continuously.** Encode preferences into linters, hooks, and golden principles rather than repeating review comments.
-- **Enforce mechanically, not rhetorically.** "STOP — do this before proceeding" doesn't work. A hook that blocks `gh pr create` does.
+- **Instructions decay, enforcement persists.** Agents forget instructions over long sessions. Pipeline gates and linters don't forget.
+- **Human taste is captured once, enforced continuously.** Encode preferences into linters, pipeline logic, and golden principles rather than repeating review comments.
+- **Enforce mechanically, not rhetorically.** "STOP — do this before proceeding" doesn't work. A programmatic gate that blocks the next phase does.
 
 ## Testing & Verification
 
