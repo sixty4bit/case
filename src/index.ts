@@ -76,7 +76,7 @@ async function main() {
     // `bun src/index.ts 1234` or `bun src/index.ts run 1234`
     const argument = command === 'run' ? positionals[1] : positionals[0];
 
-    // argument may be undefined for re-entry via .case-active
+    // argument may be undefined for re-entry via .case/active
     const mode = values.mode as PipelineMode | undefined;
     if (mode && mode !== 'attended' && mode !== 'unattended') {
       process.stderr.write('Error: --mode must be "attended" or "unattended"\n');
@@ -248,7 +248,7 @@ Usage:
   bun src/index.ts serve [options]                  Start as HTTP service
 
 Standalone CLI (run from a target repo):
-  (no argument)               Resume active task via .case-active marker
+  (no argument)               Resume active task via .case/active marker
   <issue>                     GitHub issue number (e.g., 1234)
                               Linear ID (e.g., DX-1234)
                               Freeform text (quoted, e.g., "fix login bug")

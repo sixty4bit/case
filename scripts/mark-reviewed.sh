@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Create .case-reviewed marker with evidence that code review was performed.
+# Create .case/<task-slug>/reviewed marker with evidence that code review was performed.
 # The pre-PR hook checks that this file exists and contains critical: 0.
 #
 # Usage: mark-reviewed.sh [--critical N] [--warnings N] [--info N]
 # Reads optional detailed findings from stdin.
-# Only creates .case-reviewed if --critical is 0 (or omitted).
+# Only creates the marker if --critical is 0 (or omitted).
 
 set -euo pipefail
 
+CASE_REPO="/Users/nicknisi/Developer/case"
 CRITICAL=0
 WARNINGS=0
 INFO=0
@@ -22,28 +23,37 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ "$CRITICAL" -gt 0 ]]; then
-  echo "ERROR: Cannot create .case-reviewed with $CRITICAL critical findings" >&2
+  echo "ERROR: Cannot create reviewed marker with $CRITICAL critical findings" >&2
   exit 1
 fi
 
+# Resolve task slug from .case/active
+TASK_SLUG=""
+if [[ -f ".case/active" ]]; then
+  TASK_SLUG=$(cat .case/active | tr -d '[:space:]')
+fi
+if [[ -z "$TASK_SLUG" ]]; then
+  echo "ERROR: No active task — .case/active is missing or empty. Run the orchestrator first." >&2
+  exit 1
+fi
+
+MARKER_DIR=".case/${TASK_SLUG}"
+mkdir -p "$MARKER_DIR"
+
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-cat > .case-reviewed << EOF
+cat > "${MARKER_DIR}/reviewed" << EOF
 timestamp: ${TIMESTAMP}
 critical: ${CRITICAL}
 warnings: ${WARNINGS}
 info: ${INFO}
 EOF
 
-echo ".case-reviewed created (${WARNINGS} warnings, ${INFO} info)" >&2
+echo ".case/${TASK_SLUG}/reviewed created (${WARNINGS} warnings, ${INFO} info)" >&2
 
-# Update task JSON if .case-active present
-CASE_REPO="/Users/nicknisi/Developer/case"
-if [[ -f ".case-active" ]]; then
-  TASK_ID=$(cat .case-active | tr -d '[:space:]')
-  TASK_JSON="${CASE_REPO}/tasks/active/${TASK_ID}.task.json"
-  if [[ -n "$TASK_ID" && -f "$TASK_JSON" ]]; then
-    bash "${CASE_REPO}/scripts/task-status.sh" "$TASK_JSON" agent reviewer status completed 2>/dev/null || true
-    bash "${CASE_REPO}/scripts/task-status.sh" "$TASK_JSON" agent reviewer completed now 2>/dev/null || true
-  fi
+# Update task JSON
+TASK_JSON="${CASE_REPO}/tasks/active/${TASK_SLUG}.task.json"
+if [[ -f "$TASK_JSON" ]]; then
+  bash "${CASE_REPO}/scripts/task-status.sh" "$TASK_JSON" agent reviewer status completed 2>/dev/null || true
+  bash "${CASE_REPO}/scripts/task-status.sh" "$TASK_JSON" agent reviewer completed now 2>/dev/null || true
 fi

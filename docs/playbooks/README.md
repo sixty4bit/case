@@ -18,7 +18,7 @@ Step-by-step guides for recurring operations across WorkOS OSS repos. Each playb
 2. The implementer reads the task and playbook, writes the fix/feature, and commits.
 3. The verifier tests the specific scenario with fresh context.
 4. The reviewer checks the diff against golden principles and conventions.
-5. The closer opens a PR in the target repo (requires `.case-reviewed`).
+5. The closer opens a PR in the target repo (requires `.case/<task-slug>/reviewed`).
 6. After merge, the task file moves to `tasks/done/`.
 
 ## Related Docs

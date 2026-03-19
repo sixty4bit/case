@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Create .case-tested marker with evidence that tests actually ran.
+# Create .case/<task-slug>/tested marker with evidence that tests actually ran.
 # The pre-PR hook checks that this file contains real test output, not just "touch".
 #
 # Usage: bash /path/to/mark-tested.sh <test-command-output-file>
@@ -16,7 +16,21 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CASE_REPO="/Users/nicknisi/Developer/case"
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# Resolve task slug from .case/active
+TASK_SLUG=""
+if [[ -f ".case/active" ]]; then
+  TASK_SLUG=$(cat .case/active | tr -d '[:space:]')
+fi
+if [[ -z "$TASK_SLUG" ]]; then
+  echo "ERROR: No active task — .case/active is missing or empty. Run the orchestrator first." >&2
+  exit 1
+fi
+
+MARKER_DIR=".case/${TASK_SLUG}"
+mkdir -p "$MARKER_DIR"
 
 # Resolve input to a temp file so we can inspect and hash it
 if [[ $# -ge 1 && -f "$1" ]]; then
@@ -40,7 +54,7 @@ if [[ "$FIRST_CHAR" == "{" ]]; then
   PASS_COUNT=$(echo "$STRUCTURED" | grep '^passed:' | cut -d' ' -f2)
   FAIL_COUNT=$(echo "$STRUCTURED" | grep '^failed:' | cut -d' ' -f2)
 
-  cat > .case-tested << EOF
+  cat > "${MARKER_DIR}/tested" << EOF
 timestamp: ${TIMESTAMP}
 output_hash: ${OUTPUT_HASH}
 pass_indicators: ${PASS_COUNT}
@@ -52,7 +66,7 @@ else
   PASS_COUNT=$(grep -ciE "(pass|passed|✓|ok)" "$TMPFILE" 2>/dev/null || echo "0")
   FAIL_COUNT=$(grep -ciE "(fail|failed|✗|error)" "$TMPFILE" 2>/dev/null || echo "0")
 
-  cat > .case-tested << EOF
+  cat > "${MARKER_DIR}/tested" << EOF
 timestamp: ${TIMESTAMP}
 output_hash: ${OUTPUT_HASH}
 pass_indicators: ${PASS_COUNT}
@@ -64,18 +78,12 @@ if [[ "$CLEANUP_TMP" == true ]]; then
   rm -f "$TMPFILE"
 fi
 
-echo ".case-tested created (hash: ${OUTPUT_HASH:0:12}...)" >&2
+echo ".case/${TASK_SLUG}/tested created (hash: ${OUTPUT_HASH:0:12}...)" >&2
 
-# Update task JSON if .case-active contains a task ID
-CASE_REPO="/Users/nicknisi/Developer/case"
-if [[ -f ".case-active" ]]; then
-  TASK_ID=$(cat .case-active | tr -d '[:space:]')
-  TASK_JSON="${CASE_REPO}/tasks/active/${TASK_ID}.task.json"
-  if [[ -n "$TASK_ID" && -f "$TASK_JSON" ]]; then
-    bash "${CASE_REPO}/scripts/task-status.sh" "$TASK_JSON" tested true --from-marker 2>/dev/null || true
-  else
-    echo "WARNING: .case-active contains '${TASK_ID}' but task JSON not found at ${TASK_JSON}" >&2
-  fi
+# Update task JSON
+TASK_JSON="${CASE_REPO}/tasks/active/${TASK_SLUG}.task.json"
+if [[ -f "$TASK_JSON" ]]; then
+  bash "${CASE_REPO}/scripts/task-status.sh" "$TASK_JSON" tested true --from-marker 2>/dev/null || true
 else
-  echo "WARNING: .case-active not found — task JSON 'tested' field will NOT be updated. Marker file created locally only." >&2
+  echo "WARNING: task JSON not found at ${TASK_JSON}" >&2
 fi

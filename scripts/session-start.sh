@@ -45,15 +45,22 @@ fi
 RECENT_COMMITS=$(git log --oneline -5 2>/dev/null || echo "")
 
 # --- Gather evidence markers ---
+# Markers live under .case/<task-slug>/ with .case/active as the task pointer
 CASE_TESTED="false"
 CASE_MANUAL_TESTED="false"
 CASE_REVIEWED="false"
 CASE_ACTIVE="false"
+CASE_TASK_SLUG=""
 
-[[ -f ".case-tested" ]] && CASE_TESTED="true"
-[[ -f ".case-manual-tested" ]] && CASE_MANUAL_TESTED="true"
-[[ -f ".case-reviewed" ]] && CASE_REVIEWED="true"
-[[ -f ".case-active" ]] && CASE_ACTIVE="true"
+if [[ -f ".case/active" ]]; then
+  CASE_ACTIVE="true"
+  CASE_TASK_SLUG=$(cat .case/active | tr -d '[:space:]')
+  if [[ -n "$CASE_TASK_SLUG" && -d ".case/${CASE_TASK_SLUG}" ]]; then
+    [[ -f ".case/${CASE_TASK_SLUG}/tested" ]] && CASE_TESTED="true"
+    [[ -f ".case/${CASE_TASK_SLUG}/manual-tested" ]] && CASE_MANUAL_TESTED="true"
+    [[ -f ".case/${CASE_TASK_SLUG}/reviewed" ]] && CASE_REVIEWED="true"
+  fi
+fi
 
 # --- Gather environment ---
 NODE_VERSION=$(node --version 2>/dev/null || echo "not found")

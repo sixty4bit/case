@@ -158,7 +158,7 @@ describe('runCliOrchestrator — re-entry', () => {
     });
     mockRunScript.mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 });
 
-    // Need repo dir to exist for .case-active write — make it a git repo
+    // Need repo dir to exist for .case/active write — make it a git repo
     const repoDir = join(tempDir, 'repo');
     await mkdir(repoDir, { recursive: true });
 

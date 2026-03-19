@@ -33,7 +33,7 @@ Optional: `## Context` for background info, issue links, API specs, etc.
 2. Implementer writes the fix/feature, runs tests, commits
 3. Verifier tests the specific scenario with fresh context
 4. Reviewer checks the diff against golden principles and conventions
-5. Closer agent opens a PR in the target repo (requires `.case-reviewed` with critical: 0)
+5. Closer agent opens a PR in the target repo (requires `.case/<task-slug>/reviewed` with critical: 0)
 6. Post-PR hook updates `.task.json` status to `pr-opened`
 7. After PR merge, status updated to `merged` (manual or automation)
 
@@ -60,13 +60,15 @@ Read/write via: `bash /Users/nicknisi/Developer/case/scripts/task-status.sh <fil
 
 ### Evidence Markers
 
-| Marker                | Created by                      | Purpose                                          |
-| --------------------- | ------------------------------- | ------------------------------------------------ |
-| `.case-tested`        | `scripts/mark-tested.sh`        | Proves automated tests ran (hash of test output) |
-| `.case-manual-tested` | `scripts/mark-manual-tested.sh` | Proves manual/browser testing was performed      |
-| `.case-reviewed`      | `scripts/mark-reviewed.sh`      | Proves code review passed (critical: 0)          |
+Evidence markers live under `.case/<task-slug>/` in the target repo. The `.case/active` file contains the task slug. Add `.case/` to `.gitignore` (bootstrap does this automatically).
 
-#### `.case-tested` structured format
+| Marker                              | Created by                      | Purpose                                          |
+| ----------------------------------- | ------------------------------- | ------------------------------------------------ |
+| `.case/<task-slug>/tested`          | `scripts/mark-tested.sh`        | Proves automated tests ran (hash of test output) |
+| `.case/<task-slug>/manual-tested`   | `scripts/mark-manual-tested.sh` | Proves manual/browser testing was performed      |
+| `.case/<task-slug>/reviewed`        | `scripts/mark-reviewed.sh`      | Proves code review passed (critical: 0)          |
+
+#### `tested` structured format
 
 When piped JSON output from `vitest --reporter=json`, the marker contains structured fields parsed by `scripts/parse-test-output.sh`:
 

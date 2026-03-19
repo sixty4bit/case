@@ -96,7 +96,7 @@ One branch. One PR. Phases commit sequentially. Verification and review cover th
 
 6. Activate case enforcement:
    ```bash
-   echo "{task-id}" > .case-active
+   mkdir -p .case && echo "{task-id}" > .case/active
    ```
 
 ## Step 2: Branch & Baseline
@@ -306,7 +306,7 @@ Run verification, review, and PR creation covering the **combined diff** from al
    Use `ask_user_question`: "Reviewer found `{N}` critical finding(s): `{details}`"
    Options: "Re-implement and re-review" | "Override and continue" | "Abort"
    - "Re-implement": go back to Step 3 for the affected phase, then re-run verifier and reviewer
-   - "Override": continue to 5c (note: pre-PR hook still requires `.case-reviewed`)
+   - "Override": continue to 5c (note: pre-PR hook still requires `.case/<task-slug>/reviewed`)
    - "Abort": go to Step 8 (Retrospective) with outcome "failed"
 5. **If completed** (no critical findings): Continue to 5c
 
@@ -339,9 +339,9 @@ The closer agent must verify every item below BEFORE running `gh pr create`. The
 - [ ] **Types check** — implementer ran typecheck
 - [ ] **Lint passes** — implementer ran lint
 - [ ] **Build succeeds** — implementer ran build
-- [ ] **Test evidence exists**: `.case-tested` with `output_hash` (created in Step 4 via `mark-tested.sh`)
-- [ ] **Manual testing done** (if src/ files changed): `.case-manual-tested` with `evidence` (created by verifier via `mark-manual-tested.sh`)
-- [ ] **Code review passed**: `.case-reviewed` with `critical: 0` (created by reviewer via `mark-reviewed.sh`)
+- [ ] **Test evidence exists**: `.case/<task-slug>/tested` with `output_hash` (created in Step 4 via `mark-tested.sh`)
+- [ ] **Manual testing done** (if src/ files changed): `.case/<task-slug>/manual-tested` with `evidence` (created by verifier via `mark-manual-tested.sh`)
+- [ ] **Code review passed**: `.case/<task-slug>/reviewed` with `critical: 0` (created by reviewer via `mark-reviewed.sh`)
 - [ ] **Security audit** — if the change touches auth, session, token, cookie, or middleware code: load the `security-auditor` skill and run it. Skip for non-auth changes.
 - [ ] **Task file progress log updated** — all agents appended their entries
 - [ ] **Conventional commit** — implementer used `type(scope): description`
@@ -433,7 +433,7 @@ If `/case:from-ideation` is invoked and a task already exists for this project:
 
 ### Cross-skill re-entry
 
-If the main `/case` skill (no args) encounters a `.case-active` marker pointing to an ideation task (`issueType: "ideation"`), it should **not** attempt to resume. Instead, report to the user:
+If the main `/case` skill (no args) encounters a `.case/active` marker pointing to an ideation task (`issueType: "ideation"`), it should **not** attempt to resume. Instead, report to the user:
 
 ```
 This task was created by /case:from-ideation. Resume with:

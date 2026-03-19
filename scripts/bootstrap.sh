@@ -81,12 +81,12 @@ run_step() {
   rm -f /tmp/bootstrap_output_$$
 }
 
-# --- Ensure .case-* files are in .gitignore ---
+# --- Ensure .case/ directory is in .gitignore ---
 GITIGNORE="$REPO_PATH/.gitignore"
 if [[ -f "$GITIGNORE" ]]; then
-  if ! grep -q '\.case-\*' "$GITIGNORE" 2>/dev/null; then
-    printf '\n# Case harness markers (auto-added by bootstrap)\n.case-*\n' >> "$GITIGNORE"
-    echo "  [INFO] Added .case-* to .gitignore"
+  if ! grep -q '\.case/' "$GITIGNORE" 2>/dev/null; then
+    printf '\n# Case harness markers (auto-added by bootstrap)\n.case/\n' >> "$GITIGNORE"
+    echo "  [INFO] Added .case/ to .gitignore"
   fi
 fi
 

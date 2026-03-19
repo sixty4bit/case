@@ -94,6 +94,6 @@ Check: Every call to `unsealData` / `decryptSession` must be wrapped in try-catc
 
 ## 18. Every PR must pass code review
 
-**[enforced]** The reviewer agent must produce a `.case-reviewed` marker with `critical: 0` before the closer can create a PR. Critical findings (enforced principle violations, failing tests, missing test coverage for public API changes) block PR creation. Advisory findings are posted as PR comments.
+**[enforced]** The reviewer agent must produce a `.case/<task-slug>/reviewed` marker with `critical: 0` before the closer can create a PR. Critical findings (enforced principle violations, failing tests, missing test coverage for public API changes) block PR creation. Advisory findings are posted as PR comments.
 
-Check: `test -f .case-reviewed && grep -q "critical: 0" .case-reviewed`
+Check: `SLUG=$(cat .case/active | tr -d '[:space:]') && test -f ".case/${SLUG}/reviewed" && grep -q "critical: 0" ".case/${SLUG}/reviewed"`

@@ -124,13 +124,13 @@ describe('task-scanner', () => {
 
     beforeEach(async () => {
       repoDir = join(tempDir, 'repo');
-      await mkdir(repoDir, { recursive: true });
+      await mkdir(join(repoDir, '.case'), { recursive: true });
     });
 
     it('returns task when marker points to valid task', async () => {
       const task = makeTaskJson();
       await writeTask('cli-abc-fix-test', task);
-      await Bun.write(join(repoDir, '.case-active'), 'cli-abc-fix-test\n');
+      await Bun.write(join(repoDir, '.case', 'active'), 'cli-abc-fix-test\n');
 
       const result = await findTaskByMarker(tempDir, repoDir);
 
@@ -144,21 +144,21 @@ describe('task-scanner', () => {
       expect(result).toBeNull();
     });
 
-    it('cleans up marker when task file is missing', async () => {
-      await Bun.write(join(repoDir, '.case-active'), 'nonexistent-task-id\n');
+    it('cleans up .case/ dir when task file is missing', async () => {
+      await Bun.write(join(repoDir, '.case', 'active'), 'nonexistent-task-id\n');
 
       const result = await findTaskByMarker(tempDir, repoDir);
 
       expect(result).toBeNull();
-      // Marker should be cleaned up
-      const markerExists = await Bun.file(join(repoDir, '.case-active')).exists();
-      expect(markerExists).toBe(false);
+      // Entire .case/ directory should be cleaned up
+      const caseDirExists = await Bun.file(join(repoDir, '.case', 'active')).exists();
+      expect(caseDirExists).toBe(false);
     });
 
     it('cleans up stale marker (>24h)', async () => {
       const task = makeTaskJson();
       await writeTask('cli-abc-fix-test', task);
-      const markerPath = join(repoDir, '.case-active');
+      const markerPath = join(repoDir, '.case', 'active');
       await Bun.write(markerPath, 'cli-abc-fix-test\n');
 
       // Set mtime to 25 hours ago
@@ -173,19 +173,19 @@ describe('task-scanner', () => {
     });
 
     it('cleans up marker with empty content', async () => {
-      await Bun.write(join(repoDir, '.case-active'), '  \n');
+      await Bun.write(join(repoDir, '.case', 'active'), '  \n');
 
       const result = await findTaskByMarker(tempDir, repoDir);
 
       expect(result).toBeNull();
-      const markerExists = await Bun.file(join(repoDir, '.case-active')).exists();
-      expect(markerExists).toBe(false);
+      const caseDirExists = await Bun.file(join(repoDir, '.case', 'active')).exists();
+      expect(caseDirExists).toBe(false);
     });
 
     it('returns ideation task entry phase as implement', async () => {
       const task = makeTaskJson({ issueType: 'ideation' });
       await writeTask('cli-abc-fix-test', task);
-      await Bun.write(join(repoDir, '.case-active'), 'cli-abc-fix-test\n');
+      await Bun.write(join(repoDir, '.case', 'active'), 'cli-abc-fix-test\n');
 
       const result = await findTaskByMarker(tempDir, repoDir);
 
@@ -202,7 +202,7 @@ describe('task-scanner', () => {
         },
       });
       await writeTask('cli-abc-fix-test', task);
-      await Bun.write(join(repoDir, '.case-active'), 'cli-abc-fix-test\n');
+      await Bun.write(join(repoDir, '.case', 'active'), 'cli-abc-fix-test\n');
 
       const result = await findTaskByMarker(tempDir, repoDir);
 

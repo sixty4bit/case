@@ -37,7 +37,7 @@ const completedResult: AgentResult = {
     filesChanged: ['src/x.ts'],
     testsPassed: true,
     screenshotUrls: [],
-    evidenceMarkers: ['.case-tested'],
+    evidenceMarkers: ['tested'],
     prUrl: null,
     prNumber: null,
   },

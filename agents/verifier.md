@@ -319,7 +319,7 @@ Most AuthKit example apps redirect to the WorkOS hosted login page. Follow this 
    ```bash
    bash /Users/nicknisi/Developer/case/scripts/mark-manual-tested.sh
    ```
-   This checks for recent playwright screenshots and creates `.case-manual-tested` with evidence. It also updates the task JSON `manualTested` field. You do NOT set `manualTested` directly.
+   This checks for recent playwright screenshots and creates `.case/<task-slug>/manual-tested` with evidence. It also updates the task JSON `manualTested` field. You do NOT set `manualTested` directly.
 
 ### 5. Record
 
@@ -335,7 +335,7 @@ Most AuthKit example apps redirect to the WorkOS hosted login page. Follow this 
    - Before: <before screenshot markdown>
    - After: <after screenshot markdown>
    - Video: <video link if recorded, otherwise "N/A — screenshots sufficient">
-   - Evidence: .case-tested (from implementer), .case-manual-tested (created)
+   - Evidence: .case/<task-slug>/tested (from implementer), .case/<task-slug>/manual-tested (created)
    ```
 
 2. **Update task JSON**:
@@ -350,7 +350,7 @@ End your response with the structured result block:
 
 ```
 <<<AGENT_RESULT
-{"status":"completed","summary":"<one-line description of verification>","artifacts":{"commit":null,"filesChanged":[],"testsPassed":null,"screenshotUrls":["![after](https://...)"],"evidenceMarkers":[".case-tested",".case-manual-tested"],"prUrl":null,"prNumber":null},"error":null}
+{"status":"completed","summary":"<one-line description of verification>","artifacts":{"commit":null,"filesChanged":[],"testsPassed":null,"screenshotUrls":["![after](https://...)"],"evidenceMarkers":["tested","manual-tested"],"prUrl":null,"prNumber":null},"error":null}
 AGENT_RESULT>>>
 ```
 
@@ -373,6 +373,6 @@ If verification failed (the fix doesn't work), set `"status":"failed"` and descr
 - **Always test the specific fix scenario.** "It loads" is not verification. "The org switch works with a custom cookie name" is verification. Your before/after screenshots must show a visible difference.
 - **Always complete the login flow when testing authenticated features.** Use the credentials from `~/.config/case/credentials` and follow the AuthKit login procedure in step 3c. Never screenshot an unauthenticated landing page as "evidence" for an auth feature.
 - **Never record video of a page doing nothing.** If you use video, the recording must capture real interactions. If you're only loading a page and taking a screenshot, skip video entirely.
-- **Always create evidence markers via scripts** — never `touch .case-manual-tested`.
+- **Always create evidence markers via scripts** — never `touch` marker files directly.
 - **Always end with `<<<AGENT_RESULT` / `AGENT_RESULT>>>`.** The orchestrator depends on this.
 - **If src/ files didn't change, skip Playwright.** Just mark as verified and explain why manual testing was not needed.

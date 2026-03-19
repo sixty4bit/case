@@ -10,7 +10,7 @@ import type { IssueContext, PipelineMode, TaskCreateRequest } from '../types.js'
 import type { TaskMatch } from './task-scanner.js';
 
 export interface CliOrchestratorOptions {
-  /** Issue number, Linear ID, or free text. Undefined = re-entry via .case-active. */
+  /** Issue number, Linear ID, or free text. Undefined = re-entry via .case/active. */
   argument?: string;
   mode: PipelineMode;
   dryRun: boolean;
@@ -90,9 +90,11 @@ export async function runCliOrchestrator(options: CliOrchestratorOptions): Promi
   process.stdout.write(`    JSON: ${taskResult.taskJsonPath}\n`);
   process.stdout.write(`    Spec: ${taskResult.taskMdPath}\n`);
 
-  // Write .case-active marker
-  const markerPath = resolve(detected.path, '.case-active');
-  await Bun.write(markerPath, `${taskResult.taskId}\n`);
+  // Write .case/active marker (mkdir -p equivalent)
+  const caseDirPath = resolve(detected.path, '.case');
+  const { mkdir } = await import('node:fs/promises');
+  await mkdir(caseDirPath, { recursive: true });
+  await Bun.write(resolve(caseDirPath, 'active'), `${taskResult.taskId}\n`);
 
   // --- Step 3: Run baseline ---
   process.stdout.write('Running baseline (bootstrap.sh)...\n');

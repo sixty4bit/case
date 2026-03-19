@@ -20,7 +20,7 @@ graph TD
 
     D --> G["Create task file + .task.json"]
     E --> G
-    G --> H["echo task-id > .case-active"]
+    G --> H["mkdir -p .case && echo task-id > .case/active"]
     H --> I["Baseline smoke test"]
     I -->|FAIL| RETRO["Retrospective"]
     I -->|PASS| ORCH["Programmatic Orchestrator"]
@@ -89,7 +89,7 @@ ca --agent 1234         # start working on GitHub issue #1234
 # 2. Batch mode — detect repo, fetch issue, run full pipeline
 ca 1234                 # GitHub issue
 ca DX-1234              # Linear issue
-ca                      # resume active task via .case-active marker
+ca                      # resume active task via .case/active marker
 
 # 3. Task mode — run pipeline for an existing task file
 ca --task tasks/active/cli-1-issue-53.task.json
@@ -306,7 +306,7 @@ Agents verify their work using:
 
 - **Playwright CLI** — primary tool for front-end testing. Headless, scriptable, produces screenshots/video.
 - **Screenshot uploads** — `scripts/upload-screenshot.sh` pushes images to a GitHub release and returns markdown for PR bodies. Auto-converts video to animated GIF for inline GitHub rendering.
-- **Structured test output** — `scripts/parse-test-output.sh` parses vitest JSON reporter output into machine-readable evidence for `.case-tested` markers (pass/fail counts, duration, per-file breakdown).
+- **Structured test output** — `scripts/parse-test-output.sh` parses vitest JSON reporter output into machine-readable evidence for `.case/<task-slug>/tested` markers (pass/fail counts, duration, per-file breakdown).
 - **Session context** — `scripts/session-start.sh` gathers structured JSON context (branch, commits, task status, evidence markers) at the start of every agent's context window.
 - **Reviewer agent** — reviews the diff against golden principles and conventions. Critical findings block PR creation; warnings and info are posted as PR comments.
 - **Test credentials** — `~/.config/case/credentials` for sign-in flow testing.

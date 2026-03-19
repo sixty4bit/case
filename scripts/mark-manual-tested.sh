@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Create .case-manual-tested marker with verification evidence.
+# Create .case/<task-slug>/manual-tested marker with verification evidence.
 # The pre-PR hook checks this file contains an "evidence:" line.
 #
 # Usage:
@@ -12,7 +12,22 @@
 
 set -euo pipefail
 
+CASE_REPO="/Users/nicknisi/Developer/case"
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+# Resolve task slug from .case/active
+TASK_SLUG=""
+if [[ -f ".case/active" ]]; then
+  TASK_SLUG=$(cat .case/active | tr -d '[:space:]')
+fi
+if [[ -z "$TASK_SLUG" ]]; then
+  echo "ERROR: No active task — .case/active is missing or empty. Run the orchestrator first." >&2
+  exit 1
+fi
+
+MARKER_DIR=".case/${TASK_SLUG}"
+mkdir -p "$MARKER_DIR"
+
 EVIDENCE_FOUND=false
 EVIDENCE_DETAILS=""
 MODE="playwright"
@@ -72,23 +87,17 @@ else
   fi
 fi
 
-cat > .case-manual-tested << EOF
+cat > "${MARKER_DIR}/manual-tested" << EOF
 timestamp: ${TIMESTAMP}
 evidence: ${EVIDENCE_DETAILS}
 EOF
 
-echo ".case-manual-tested created (${EVIDENCE_DETAILS})" >&2
+echo ".case/${TASK_SLUG}/manual-tested created (${EVIDENCE_DETAILS})" >&2
 
-# Update task JSON if .case-active contains a task ID
-CASE_REPO="/Users/nicknisi/Developer/case"
-if [[ -f ".case-active" ]]; then
-  TASK_ID=$(cat .case-active | tr -d '[:space:]')
-  TASK_JSON="${CASE_REPO}/tasks/active/${TASK_ID}.task.json"
-  if [[ -n "$TASK_ID" && -f "$TASK_JSON" ]]; then
-    bash "${CASE_REPO}/scripts/task-status.sh" "$TASK_JSON" manualTested true --from-marker 2>/dev/null || true
-  else
-    echo "WARNING: .case-active contains '${TASK_ID}' but task JSON not found at ${TASK_JSON}" >&2
-  fi
+# Update task JSON
+TASK_JSON="${CASE_REPO}/tasks/active/${TASK_SLUG}.task.json"
+if [[ -f "$TASK_JSON" ]]; then
+  bash "${CASE_REPO}/scripts/task-status.sh" "$TASK_JSON" manualTested true --from-marker 2>/dev/null || true
 else
-  echo "WARNING: .case-active not found — task JSON 'manualTested' field will NOT be updated. Marker file created locally only." >&2
+  echo "WARNING: task JSON not found at ${TASK_JSON}" >&2
 fi

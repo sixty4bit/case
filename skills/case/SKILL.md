@@ -61,7 +61,7 @@ Parse the arguments passed to `/case`. The argument determines the workflow:
 
 **No argument** — `/case`
 
-1. Check if `.case-active` exists with a task ID → if so, resume that task (see Re-entry Semantics below)
+1. Check if `.case/active` exists with a task ID → if so, resume that task (see Re-entry Semantics below)
 2. Otherwise, load harness context for the current task. Follow the Task Routing table below.
 
 **GitHub issue number** — `/case 34`
@@ -92,18 +92,18 @@ After parsing and fetching the issue, execute this pipeline:
 
 ### Step 0: Check for Existing Task (Re-entry)
 
-**Explicit arguments always win over `.case-active`.** The `.case-active` shortcut is only used for no-arg `/case`. When an explicit issue number or Linear ID is provided, re-entry is matched by issue content, not by `.case-active`.
+**Explicit arguments always win over `.case/active`.** The `.case/active` shortcut is only used for no-arg `/case`. When an explicit issue number or Linear ID is provided, re-entry is matched by issue content, not by `.case/active`.
 
 1. **If an explicit argument was provided** (issue number or Linear ID):
    - Scan `/Users/nicknisi/Developer/case/tasks/active/*.task.json` for a match:
      - GitHub issue → matching `repo` + `issueType: "github"` + `issue` number
      - Linear ID → matching `issueType: "linear"` + `issue` ID
-   - Ignore `.case-active` — it may be stale or from a different issue
+   - Ignore `.case/active` — it may be stale or from a different issue
    - If found and matches the argument → resume (see status table below)
    - If not found → proceed to step 1 (new task)
 
 2. **If no argument** (`/case` with no args):
-   - Read `.case-active` — if it contains a task ID, look up `/Users/nicknisi/Developer/case/tasks/active/{task-id}.task.json` directly
+   - Read `.case/active` — if it contains a task ID, look up `/Users/nicknisi/Developer/case/tasks/active/{task-id}.task.json` directly
    - If found → check `issueType`:
      - **If `"ideation"`**: Do NOT resume here. Report to user: "This task was created by `/case:from-ideation`. Resume with: `/case:from-ideation {contractPath}`" and stop.
      - **Otherwise**: resume (see status table below)
@@ -155,7 +155,7 @@ _(Already done in the Arguments section above)_
    ```
 5. Activate case enforcement — write the task ID (not bare touch):
    ```bash
-   echo "<task-id>" > .case-active
+   mkdir -p .case && echo "<task-id>" > .case/active
    ```
 
 ### Step 3: Branch & Baseline
@@ -305,7 +305,7 @@ Report the failure to user via `ask_user_question`:
      "Reviewer found `<N>` critical finding(s): `<details>`"
      Options: "Re-implement and re-review" | "Override and continue" | "Abort"
      If "Re-implement and re-review": **go to step 4 (Implementer)** to address the findings, then re-run verifier and reviewer.
-     If "Override and continue": continue to step 7 (Closer). Note: the closer still requires `.case-reviewed` — the user must manually create the marker or address the findings.
+     If "Override and continue": continue to step 7 (Closer). Note: the closer still requires `.case/<task-slug>/reviewed` — the user must manually create the marker or address the findings.
      If "Abort": **go to step 9 (Retrospective)** with outcome "failed" and failed agent "reviewer".
 6. If `status == "completed"` (no critical findings): continue to step 7
 
@@ -355,11 +355,11 @@ Report the failure to user via `ask_user_question`:
 
 If `/case` is invoked and a `.task.json` already exists for the issue, the orchestrator resumes from the last completed agent phase instead of recreating everything. This handles crashed or interrupted runs.
 
-**Explicit arguments win.** When `/case 53` or `/case DX-1234` is invoked, re-entry is matched by scanning `.task.json` files for the specific issue — `.case-active` is ignored (it may be stale or from a different issue).
+**Explicit arguments win.** When `/case 53` or `/case DX-1234` is invoked, re-entry is matched by scanning `.task.json` files for the specific issue — `.case/active` is ignored (it may be stale or from a different issue).
 
-**No-arg `/case`** uses `.case-active` as a convenience shortcut to resume the most recent task.
+**No-arg `/case`** uses `.case/active` as a convenience shortcut to resume the most recent task.
 
-**Free-form tasks**: No automatic re-entry (ambiguous). User can resume by running `/case` with no arguments from the same branch — the `.case-active` marker routes them.
+**Free-form tasks**: No automatic re-entry (ambiguous). User can resume by running `/case` with no arguments from the same branch — the `.case/active` marker routes them.
 
 ## Baseline Smoke Test
 
@@ -566,10 +566,10 @@ The orchestrator spawns the closer, which handles this checklist. If you're the 
 - [ ] **Types check** — implementer ran typecheck
 - [ ] **Lint passes** — implementer ran lint
 - [ ] **Build succeeds** — implementer ran build
-- [ ] **Test evidence exists**: `.case-tested` with `output_hash` (created by implementer via `mark-tested.sh`)
-- [ ] **Manual testing done** (if src/ files changed): `.case-manual-tested` with `evidence` (created by verifier via `mark-manual-tested.sh`)
+- [ ] **Test evidence exists**: `.case/<task-slug>/tested` with `output_hash` (created by implementer via `mark-tested.sh`)
+- [ ] **Manual testing done** (if src/ files changed): `.case/<task-slug>/manual-tested` with `evidence` (created by verifier via `mark-manual-tested.sh`)
 - [ ] **Screenshots captured and uploaded** (if front-end changes): verifier captured via Playwright and uploaded via `upload-screenshot.sh`
-- [ ] **Code review passed**: `.case-reviewed` with `critical: 0` (created by reviewer via `mark-reviewed.sh`)
+- [ ] **Code review passed**: `.case/<task-slug>/reviewed` with `critical: 0` (created by reviewer via `mark-reviewed.sh`)
 - [ ] **Security audit** — if the change touches authentication, session management, token handling, cookie logic, middleware, or any code that enforces access control: load the `security-auditor` skill via the Skill tool and run it against the changed files. Address any critical or high findings before proceeding. Skip for changes that don't touch auth/security boundaries.
 - [ ] **Task file progress log updated** — all agents appended their entries
 - [ ] **Conventional commit** — implementer used `type(scope): description`

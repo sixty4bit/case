@@ -5,7 +5,7 @@ describe('parseAgentResult', () => {
   it('parses a valid AGENT_RESULT with all fields', () => {
     const raw = `Some agent output here...
 <<<AGENT_RESULT
-{"status":"completed","summary":"Fixed the bug","artifacts":{"commit":"abc123","filesChanged":["src/x.ts"],"testsPassed":true,"screenshotUrls":[],"evidenceMarkers":[".case-tested"],"prUrl":null,"prNumber":null},"error":null}
+{"status":"completed","summary":"Fixed the bug","artifacts":{"commit":"abc123","filesChanged":["src/x.ts"],"testsPassed":true,"screenshotUrls":[],"evidenceMarkers":["tested"],"prUrl":null,"prNumber":null},"error":null}
 AGENT_RESULT>>>
 Done.`;
 
@@ -15,7 +15,7 @@ Done.`;
     expect(result.artifacts.commit).toBe('abc123');
     expect(result.artifacts.filesChanged).toEqual(['src/x.ts']);
     expect(result.artifacts.testsPassed).toBe(true);
-    expect(result.artifacts.evidenceMarkers).toEqual(['.case-tested']);
+    expect(result.artifacts.evidenceMarkers).toEqual(['tested']);
     expect(result.error).toBeNull();
   });
 

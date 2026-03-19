@@ -161,15 +161,15 @@ All checks must pass before proceeding. If any fail, fix the issue and re-run. I
 After each meaningful implementation step (e.g., test written, root cause fixed, validation passing), create a WIP commit:
 
 ```bash
-git add -A -- ':!.case-*' && git commit -m "wip: {what this step accomplished}"
+git add -A -- ':!.case/' && git commit -m "wip: {what this step accomplished}"
 ```
 
-**IMPORTANT**: Always exclude `.case-*` files from commits using the pathspec exclusion `':!.case-*'`. These are harness evidence markers managed by other agents — committing them pollutes the PR and requires manual cleanup.
+**IMPORTANT**: Always exclude the `.case/` directory from commits using the pathspec exclusion `':!.case/'`. This directory contains harness evidence markers managed by other agents — committing it pollutes the PR and requires manual cleanup.
 
 WIP commits provide rollback points if a later step goes wrong. Before your final commit (step 4), squash all WIP commits into one clean conventional commit:
 
 ```bash
-git reset --soft $(git merge-base HEAD main) && git add -A -- ':!.case-*'
+git reset --soft $(git merge-base HEAD main) && git add -A -- ':!.case/'
 ```
 
 Then create the final commit as usual.
@@ -186,7 +186,7 @@ Then create the final commit as usual.
    pnpm test 2>&1 | bash /Users/nicknisi/Developer/case/scripts/mark-tested.sh
    ```
 
-   This creates `.case-tested` with a hash of test output AND updates the task JSON `tested` field. You do NOT set `tested` directly.
+   This creates `.case/<task-slug>/tested` with a hash of test output AND updates the task JSON `tested` field. You do NOT set `tested` directly.
 
 2. **Commit with a conventional message**:
 
@@ -251,7 +251,7 @@ End your response with the structured result block. The orchestrator parses this
 
 ```
 <<<AGENT_RESULT
-{"status":"completed","summary":"<one-line description of what was done>","artifacts":{"commit":"<hash>","filesChanged":["<file1>","<file2>"],"testsPassed":true,"screenshotUrls":[],"evidenceMarkers":[".case-tested"],"prUrl":null,"prNumber":null},"error":null}
+{"status":"completed","summary":"<one-line description of what was done>","artifacts":{"commit":"<hash>","filesChanged":["<file1>","<file2>"],"testsPassed":true,"screenshotUrls":[],"evidenceMarkers":["tested"],"prUrl":null,"prNumber":null},"error":null}
 AGENT_RESULT>>>
 ```
 
@@ -262,7 +262,7 @@ If you failed, set `"status":"failed"` and fill in the `"error"` field. Still en
 - **Never start example apps.** That's the verifier's job.
 - **Never run browser automation.** That's the verifier's job.
 - **Never create PRs or push.** That's the closer's job.
-- **Never create `.case-manual-tested`.** That's the verifier's job via `mark-manual-tested.sh`.
+- **Never create manual-tested markers.** That's the verifier's job via `mark-manual-tested.sh`.
 - **Never set `tested` or `manualTested` directly in task JSON.** The marker script handles `tested` as a side effect.
 - **Always commit before returning.** The verifier needs a clean diff to review.
 - **Always update the progress log.** The closer reads it to draft the PR description.

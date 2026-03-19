@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Parse vitest JSON reporter output into structured key-value format.
 # Agents pipe vitest --reporter=json output through this to get machine-readable
-# evidence for .case-tested markers.
+# evidence for .case/<task-slug>/tested markers.
 #
 # Usage: bash /path/to/parse-test-output.sh <json-file>
 # Or pipe: vitest --reporter=json 2>&1 | bash /path/to/parse-test-output.sh
 #
-# Output: key-value pairs (one per line) suitable for embedding in .case-tested
+# Output: key-value pairs (one per line) suitable for embedding in tested marker
 
 set -euo pipefail
 

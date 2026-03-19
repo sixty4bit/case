@@ -43,10 +43,10 @@ bash /Users/nicknisi/Developer/case/scripts/task-status.sh <task.json> agent clo
 
 1. Read the task file (`.md`) — full content including progress log entries from all agents
 2. Read the task JSON for issue reference, repo, branch
-3. Read verification evidence markers:
-   - `.case-tested` — should have `output_hash` field
-   - `.case-manual-tested` — should have `evidence` field (if src/ files changed)
-   - `.case-reviewed` — should have `critical: 0` (review findings summary)
+3. Read verification evidence markers (get task slug from `.case/active`, markers are under `.case/<task-slug>/`):
+   - `.case/<task-slug>/tested` — should have `output_hash` field
+   - `.case/<task-slug>/manual-tested` — should have `evidence` field (if src/ files changed)
+   - `.case/<task-slug>/reviewed` — should have `critical: 0` (review findings summary)
 4. Extract before/after screenshot tags from the verifier's progress log entry or AGENT_RESULT (look for `![` image tags). Also look for optional video download links (look for `[▶` links).
 5. Read `/Users/nicknisi/Developer/case/docs/conventions/pull-requests.md` for PR format rules
 
@@ -123,10 +123,11 @@ Before running `gh pr create`, verify every requirement.
    fi
    ```
 
-3. **Test evidence**: Read `.case-tested` — must exist with `output_hash` field
+3. **Test evidence**: Read `.case/<task-slug>/tested` — must exist with `output_hash` field
 
    ```bash
-   test -f .case-tested && grep -q "output_hash:" .case-tested
+   SLUG=$(cat .case/active | tr -d '[:space:]')
+   test -f ".case/${SLUG}/tested" && grep -q "output_hash:" ".case/${SLUG}/tested"
    ```
 
 4. **Manual test evidence** (conditional):
@@ -134,13 +135,13 @@ Before running `gh pr create`, verify every requirement.
    ```bash
    # Only required if src/ files changed
    if git diff --name-only main | grep -q "^src/"; then
-     test -f .case-manual-tested && grep -q "evidence:" .case-manual-tested
+     test -f ".case/${SLUG}/manual-tested" && grep -q "evidence:" ".case/${SLUG}/manual-tested"
    fi
    ```
 
-5. **Review evidence**: Read `.case-reviewed` — must exist with `critical: 0`
+5. **Review evidence**: Read `.case/<task-slug>/reviewed` — must exist with `critical: 0`
    ```bash
-   test -f .case-reviewed && grep -q "critical: 0" .case-reviewed
+   test -f ".case/${SLUG}/reviewed" && grep -q "critical: 0" ".case/${SLUG}/reviewed"
    ```
 
 If any required check fails:
@@ -162,7 +163,7 @@ The body must contain verification keywords (any of: "verif", "tested", "test pl
 
 ### 4.5 Post Review Comments (if findings exist)
 
-If the reviewer produced warnings or info findings (check `.case-reviewed` for `warnings` and `info` counts), post them as a PR review comment:
+If the reviewer produced warnings or info findings (check `.case/<task-slug>/reviewed` for `warnings` and `info` counts), post them as a PR review comment:
 
 ```bash
 # Read findings from the reviewer's progress log entry in the task file
