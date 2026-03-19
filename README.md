@@ -1,6 +1,6 @@
 # Case
 
-<img width="500" height="500" alt="Gemini_Generated_Image_osdc2vosdc2vosdc-removebg-preview" src="https://github.com/user-attachments/assets/d00ab668-d26b-41d2-905b-751d3c0ff236" />
+<img width="500" height="500" alt="Untitled_design__2_-removebg-preview" src="https://github.com/user-attachments/assets/3fc18864-10f2-4d07-9ae9-13ad590f7a8f" />
 
 A harness for orchestrating AI agent work across WorkOS open source projects.
 
