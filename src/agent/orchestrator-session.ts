@@ -40,6 +40,8 @@ export async function startOrchestratorSession(options: OrchestratorSessionOptio
   // Gather context before creating the session (same as cli-orchestrator Steps 0-0b)
   const contextBriefing = await gatherContext(options);
 
+  printBanner(contextBriefing);
+
   const settingsManager = SettingsManager.create(cwd, agentDir);
   settingsManager.setQuietStartup(true);
 
@@ -116,6 +118,38 @@ async function gatherContext(options: OrchestratorSessionOptions): Promise<strin
   }
 
   return lines.join('\n');
+}
+
+function printBanner(contextBriefing: string): void {
+  const W = 52;
+  const dim = (s: string) => `\x1b[2m${s}\x1b[0m`;
+  const bold = (s: string) => `\x1b[1m${s}\x1b[0m`;
+  const cyan = (s: string) => `\x1b[36m${s}\x1b[0m`;
+  const pad = (s: string) => s.slice(0, W).padEnd(W);
+  const row = (content: string) => dim('  │') + content + dim('│');
+  const hr = (l: string, r: string) => dim(`  ${l}${'─'.repeat(W)}${r}`);
+
+  const home = process.env.HOME ?? '';
+  const robot = ['   ▄█████▄', '   █ ● ○ █', '   █▄░░░▄█', '   ▀██ ██▀'];
+  const info = contextBriefing
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => (home ? line.replaceAll(home, '~') : line));
+
+  const lines = [
+    '',
+    hr('╭', '╮'),
+    row(cyan(pad(robot[0]))),
+    row(cyan(robot[1]) + bold('  case') + dim((' · agent orchestrator').padEnd(W - 10))),
+    row(cyan(pad(robot[2]))),
+    row(cyan(pad(robot[3]))),
+    hr('├', '┤'),
+    ...info.map((line) => row(pad(`  ${line}`))),
+    hr('╰', '╯'),
+    '',
+  ];
+
+  process.stderr.write(lines.join('\n') + '\n');
 }
 
 function buildOrchestratorSystemPrompt(caseRoot: string): string {
