@@ -100,16 +100,9 @@ async function gatherContext(options: OrchestratorSessionOptions): Promise<strin
         }
       }
     } else {
-      // No argument — check for active task via .case-active marker
-      const match = await findTaskByMarker(options.caseRoot, detected.path);
-      if (match) {
-        lines.push(`\nActive task: ${match.taskJson.id} (status: ${match.taskJson.status})`);
-        lines.push(`Entry phase: ${match.entryPhase}`);
-        lines.push(`Task JSON: ${match.taskJsonPath}`);
-        lines.push(`\nTask is resumable from the ${match.entryPhase} phase.`);
-      } else {
-        lines.push(`No active task. Ready for a new issue or discussion.`);
-      }
+      // No argument — don't auto-detect active tasks.
+      // Let the agent discover them on demand to avoid auto-execution.
+      lines.push(`No argument provided. What would you like to work on?`);
     }
   } catch {
     // Not in a target repo — still useful for freeform sessions

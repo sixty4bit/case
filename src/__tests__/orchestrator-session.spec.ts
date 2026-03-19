@@ -127,21 +127,15 @@ describe('startOrchestratorSession', () => {
 
     const [, options] = mockInteractiveModeRun.mock.calls[0];
     expect(options.initialMessage).toContain('Repo: cli');
-    expect(options.initialMessage).toContain('No active task');
+    expect(options.initialMessage).toContain('What would you like to work on?');
   });
 
-  it('includes existing task context when marker found', async () => {
-    mockFindTaskByMarker.mockResolvedValue({
-      taskJson: { id: 'cli-1', status: 'implementing' },
-      taskJsonPath: '/case/tasks/active/cli-1.task.json',
-      entryPhase: 'verify',
-    });
-
+  it('does not auto-detect active task when no argument provided', async () => {
     await startOrchestratorSession({ caseRoot: '/case', mode: 'attended' });
 
+    expect(mockFindTaskByMarker).not.toHaveBeenCalled();
     const [, options] = mockInteractiveModeRun.mock.calls[0];
-    expect(options.initialMessage).toContain('Active task: cli-1');
-    expect(options.initialMessage).toContain('implementing');
+    expect(options.initialMessage).not.toContain('Active task');
   });
 
   it('fetches issue context when argument provided', async () => {
