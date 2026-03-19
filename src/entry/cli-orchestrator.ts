@@ -144,7 +144,7 @@ async function resumeTask(match: TaskMatch, repoPath: string, mode: PipelineMode
 
   // Checkout the task's branch if it has one
   if (taskJson.branch) {
-    await ensureBranchForResume(taskJson.branch, repoPath);
+    await ensureBranch(taskJson.branch, repoPath, true);
   }
 
   // Build config from existing task JSON and dispatch
@@ -186,80 +186,25 @@ function deriveBranchPrefix(labels: string[]): string {
 }
 
 /**
- * Create or checkout a branch.
- * If branch already exists, checkout. Otherwise, create from current HEAD.
+ * Create or checkout a git branch.
+ * If branch exists, checkout. Otherwise, create from HEAD.
+ * When `warnOnCreate` is true (resume flow), warns that the branch was recreated.
  */
-async function ensureBranch(branchName: string, repoPath: string): Promise<void> {
-  // Check if branch exists
-  const check = Bun.spawn(['git', 'rev-parse', '--verify', branchName], {
-    cwd: repoPath,
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  const checkExitCode = await check.exited;
+async function ensureBranch(branchName: string, repoPath: string, warnOnCreate = false): Promise<void> {
+  const check = await runScript('git', ['rev-parse', '--verify', branchName], { cwd: repoPath });
 
-  if (checkExitCode === 0) {
-    // Branch exists — checkout
-    const co = Bun.spawn(['git', 'checkout', branchName], {
-      cwd: repoPath,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const exitCode = await co.exited;
-    if (exitCode !== 0) {
-      const stderr = await new Response(co.stderr).text();
-      throw new Error(`Failed to checkout branch ${branchName}: ${stderr.trim()}`);
+  if (check.exitCode === 0) {
+    const co = await runScript('git', ['checkout', branchName], { cwd: repoPath });
+    if (co.exitCode !== 0) {
+      throw new Error(`Failed to checkout branch ${branchName}: ${co.stderr.trim()}`);
     }
   } else {
-    // Create new branch
-    const create = Bun.spawn(['git', 'checkout', '-b', branchName], {
-      cwd: repoPath,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const exitCode = await create.exited;
-    if (exitCode !== 0) {
-      const stderr = await new Response(create.stderr).text();
-      throw new Error(`Failed to create branch ${branchName}: ${stderr.trim()}`);
+    if (warnOnCreate) {
+      process.stdout.write(`  Warning: branch ${branchName} not found, recreating from HEAD\n`);
     }
-  }
-}
-
-/**
- * Checkout a branch for task resumption.
- * If the branch exists, check it out. If it was deleted, recreate from HEAD and warn.
- */
-async function ensureBranchForResume(branchName: string, repoPath: string): Promise<void> {
-  const check = Bun.spawn(['git', 'rev-parse', '--verify', branchName], {
-    cwd: repoPath,
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  const checkExitCode = await check.exited;
-
-  if (checkExitCode === 0) {
-    const co = Bun.spawn(['git', 'checkout', branchName], {
-      cwd: repoPath,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const exitCode = await co.exited;
-    if (exitCode !== 0) {
-      const stderr = await new Response(co.stderr).text();
-      throw new Error(`Failed to checkout branch ${branchName}: ${stderr.trim()}`);
-    }
-  } else {
-    // Branch was deleted — recreate from HEAD
-    process.stdout.write(`  Warning: branch ${branchName} not found, recreating from HEAD\n`);
-    const create = Bun.spawn(['git', 'checkout', '-b', branchName], {
-      cwd: repoPath,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-    const exitCode = await create.exited;
-    if (exitCode !== 0) {
-      const stderr = await new Response(create.stderr).text();
-      throw new Error(`Failed to recreate branch ${branchName}: ${stderr.trim()}`);
+    const create = await runScript('git', ['checkout', '-b', branchName], { cwd: repoPath });
+    if (create.exitCode !== 0) {
+      throw new Error(`Failed to create branch ${branchName}: ${create.stderr.trim()}`);
     }
   }
 }

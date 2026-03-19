@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { homedir } from 'node:os';
 import type { IssueContext } from '../types.js';
 import { extractOwnerRepo } from './repo-detector.js';
+import { slugify } from '../util/slugify.js';
 
 const CREDENTIALS_PATH = resolve(homedir(), '.config/case/credentials');
 
@@ -148,7 +149,7 @@ export function freeformIssue(text: string): IssueContext {
     body: text,
     labels: [],
     issueType: 'freeform',
-    issueNumber: slugify(text),
+    issueNumber: slugifyBranch(text),
   };
 }
 
@@ -171,11 +172,5 @@ async function readLinearApiKey(): Promise<string | null> {
   return null;
 }
 
-/** Simple slug from text for branch naming. */
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 40);
-}
+// slugify imported from ../util/slugify.js — uses 40-char limit for branch naming
+const slugifyBranch = (text: string) => slugify(text, 40);

@@ -2,17 +2,9 @@ import { mkdir } from 'node:fs/promises';
 import { resolve, basename } from 'node:path';
 import type { IssueContext, TaskCreateRequest, TaskJson } from '../types.js';
 import { createLogger } from '../util/logger.js';
+import { slugify } from '../util/slugify.js';
 
 const log = createLogger();
-
-/** Slugify a title for use in file names. */
-function slugify(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
-    .slice(0, 60);
-}
 
 /** Generate a task ID from repo + timestamp + title slug. */
 function generateTaskId(repo: string, title: string): string {

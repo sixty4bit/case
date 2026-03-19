@@ -152,11 +152,13 @@ export async function executeFromIdeation(options: FromIdeationOptions): Promise
     const taskResult = await createTask(caseRoot, request, { branch: branchName });
     taskJsonPath = taskResult.taskJsonPath;
 
-    // Write contractPath to task JSON
+    // Write contractPath to task JSON (skip if already set)
     const taskJsonRaw = await readFile(taskJsonPath, 'utf-8');
     const taskJson = JSON.parse(taskJsonRaw) as TaskJson;
-    taskJson.contractPath = contractPath;
-    await writeFile(taskJsonPath, JSON.stringify(taskJson, null, 2) + '\n');
+    if (taskJson.contractPath !== contractPath) {
+      taskJson.contractPath = contractPath;
+      await writeFile(taskJsonPath, JSON.stringify(taskJson, null, 2) + '\n');
+    }
   } catch (err) {
     return { success: false, phases, prUrl: null, error: `Task creation failed: ${(err as Error).message}` };
   }

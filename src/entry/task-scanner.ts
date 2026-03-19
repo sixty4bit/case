@@ -63,27 +63,23 @@ export async function findTaskByIssue(
 export async function findTaskByMarker(caseRoot: string, repoPath: string): Promise<TaskMatch | null> {
   const markerPath = resolve(repoPath, '.case-active');
 
-  // Check if marker exists
-  const markerFile = Bun.file(markerPath);
-  if (!(await markerFile.exists())) {
-    return null;
+  // Check marker exists and staleness in one stat call
+  let markerStat;
+  try {
+    markerStat = await stat(markerPath);
+  } catch {
+    return null; // Marker doesn't exist
   }
 
-  // Check staleness (>24h)
-  try {
-    const markerStat = await stat(markerPath);
-    const ageMs = Date.now() - markerStat.mtimeMs;
-    if (ageMs > STALE_MARKER_MS) {
-      await cleanupMarker(markerPath);
-      process.stdout.write('Stale .case-active marker (>24h) cleaned up.\n');
-      return null;
-    }
-  } catch {
+  const ageMs = Date.now() - markerStat.mtimeMs;
+  if (ageMs > STALE_MARKER_MS) {
+    await cleanupMarker(markerPath);
+    process.stdout.write('Stale .case-active marker (>24h) cleaned up.\n');
     return null;
   }
 
   // Read task ID from marker
-  const taskId = (await markerFile.text()).trim();
+  const taskId = (await Bun.file(markerPath).text()).trim();
   if (!taskId) {
     await cleanupMarker(markerPath);
     return null;
