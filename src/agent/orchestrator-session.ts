@@ -125,6 +125,8 @@ async function gatherContext(options: OrchestratorSessionOptions): Promise<strin
 function buildOrchestratorSystemPrompt(caseRoot: string): string {
   return `You are the Case orchestrator — an interactive agent for managing WorkOS OSS repos.
 
+**Always wait for the user's first message before calling any tools.** The initial context below is background information, not a request to act. Greet the user briefly and wait.
+
 ## Tools
 
 - \`run_pipeline\` — Run the agent pipeline (implement → verify → review → close) for a task file.
