@@ -57,7 +57,7 @@ mock.module('@mariozechner/pi-coding-agent', () => ({
       return mockResourceLoaderReload(this.options);
     }
   },
-  SettingsManager: { create: () => ({}) },
+  SettingsManager: { create: () => ({ setQuietStartup: () => {} }) },
   AuthStorage: { create: () => ({}) },
   ModelRegistry: class {
     constructor() {}

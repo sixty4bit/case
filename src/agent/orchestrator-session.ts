@@ -40,10 +40,13 @@ export async function startOrchestratorSession(options: OrchestratorSessionOptio
   // Gather context before creating the session (same as cli-orchestrator Steps 0-0b)
   const contextBriefing = await gatherContext(options);
 
+  const settingsManager = SettingsManager.create(cwd, agentDir);
+  settingsManager.setQuietStartup(true);
+
   const resourceLoader = new DefaultResourceLoader({
     cwd,
     agentDir,
-    settingsManager: SettingsManager.create(cwd, agentDir),
+    settingsManager,
     appendSystemPrompt: buildOrchestratorSystemPrompt(options.caseRoot),
   });
   await resourceLoader.reload();
