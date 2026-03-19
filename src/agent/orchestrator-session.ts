@@ -7,7 +7,9 @@ import {
   ModelRegistry,
   getAgentDir,
 } from '@mariozechner/pi-coding-agent';
-import type { ToolDefinition } from '@mariozechner/pi-coding-agent';
+import type { ExtensionAPI, ToolDefinition } from '@mariozechner/pi-coding-agent';
+import { truncateToWidth, visibleWidth } from '@mariozechner/pi-tui';
+import { basename, resolve } from 'node:path';
 import { getModelForAgent } from './config.js';
 import { detectRepo } from '../entry/repo-detector.js';
 import { detectArgumentType, fetchIssue } from '../entry/issue-fetcher.js';
@@ -45,15 +47,17 @@ export async function startOrchestratorSession(options: OrchestratorSessionOptio
   const settingsManager = SettingsManager.create(cwd, agentDir);
   settingsManager.setQuietStartup(true);
 
+
   const resourceLoader = new DefaultResourceLoader({
     cwd,
     agentDir,
     settingsManager,
     appendSystemPrompt: buildOrchestratorSystemPrompt(options.caseRoot),
+    extensionFactories: [minimalStatusline(cwd)],
   });
   await resourceLoader.reload();
 
-  const { session, modelFallbackMessage } = await createAgentSession({
+  const { session, extensionsResult, modelFallbackMessage } = await createAgentSession({
     cwd,
     agentDir,
     authStorage,
@@ -68,6 +72,12 @@ export async function startOrchestratorSession(options: OrchestratorSessionOptio
       createBaselineTool(options.caseRoot),
     ] as unknown as ToolDefinition[],
   });
+
+  if (extensionsResult?.errors?.length) {
+    for (const err of extensionsResult.errors) {
+      process.stderr.write(`⚠ Extension error: ${err.path}\n  ${err.error}\n`);
+    }
+  }
 
   const interactive = new InteractiveMode(session, {
     modelFallbackMessage,
@@ -151,6 +161,74 @@ function printBanner(contextBriefing: string): void {
   ];
 
   process.stderr.write(lines.join('\n') + '\n');
+}
+
+/**
+ * Minimal statusline for the case orchestrator.
+ * Shows: project · branch · model · context bar + percentage
+ * Loaded as an extensionFactory so it fires last and overrides any global statusline.
+ */
+function minimalStatusline(cwd: string) {
+  return (pi: ExtensionAPI) => {
+    pi.on('session_start', async (_event, ctx) => {
+      ctx.ui.setFooter((tui, theme, footerData) => {
+        const unsub = footerData.onBranchChange(() => tui.requestRender());
+
+        return {
+          dispose: unsub,
+          invalidate() {},
+          render(width: number): string[] {
+            const sep = theme.fg('dim', ' · ');
+
+            // Project name from cwd
+            const project = theme.fg('accent', basename(cwd));
+
+            // Git branch
+            const branch = footerData.getGitBranch();
+            const branchStr = branch ? theme.fg('muted', branch) : '';
+
+            // Model
+            const modelId = ctx.model?.id ?? '—';
+            const modelStr = theme.fg('muted', modelId);
+
+            // Context usage bar
+            const usage = ctx.getContextUsage();
+            const contextWindow = ctx.model?.contextWindow ?? 0;
+            let barStr = '';
+
+            if (usage?.tokens != null && contextWindow > 0) {
+              const pct = Math.min(100, Math.round((usage.tokens / contextWindow) * 100));
+              const barWidth = 10;
+              const filled = Math.round((pct / 100) * barWidth);
+              const empty = barWidth - filled;
+
+              const barColor: 'error' | 'warning' | 'success' =
+                pct >= 80 ? 'error' : pct >= 60 ? 'warning' : 'success';
+              const bar =
+                theme.fg(barColor, '█'.repeat(filled)) + theme.fg('dim', '░'.repeat(empty));
+              barStr = bar + ' ' + theme.fg('dim', `${pct}%`);
+            }
+
+            // Assemble: project · branch · model
+            const parts = [project];
+            if (branchStr) parts.push(branchStr);
+            parts.push(modelStr);
+
+            const left = parts.join(sep);
+
+            if (!barStr) {
+              return [truncateToWidth(left, width)];
+            }
+
+            const pad = ' '.repeat(
+              Math.max(1, width - visibleWidth(left) - visibleWidth(barStr)),
+            );
+            return [truncateToWidth(left + pad + barStr, width)];
+          },
+        };
+      });
+    });
+  };
 }
 
 function buildOrchestratorSystemPrompt(caseRoot: string): string {
