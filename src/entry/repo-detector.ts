@@ -1,5 +1,6 @@
 import { resolve } from 'node:path';
 import { loadProjects, resolveRepoPath } from '../config.js';
+import { runScript } from '../util/run-script.js';
 import type { ProjectEntry } from '../types.js';
 
 export interface DetectedRepo {
@@ -87,20 +88,9 @@ export async function detectRepo(caseRoot: string, cwd?: string): Promise<Detect
 /** Run `git remote get-url origin` in the given directory. Returns URL or null. */
 async function getGitRemoteUrl(cwd: string): Promise<string | null> {
   try {
-    const proc = Bun.spawn(['git', 'remote', 'get-url', 'origin'], {
-      cwd,
-      stdout: 'pipe',
-      stderr: 'pipe',
-    });
-
-    const stdout = await new Response(proc.stdout).text();
-    const exitCode = await proc.exited;
-
-    if (exitCode !== 0) {
-      return null;
-    }
-
-    return stdout.trim() || null;
+    const result = await runScript('git', ['remote', 'get-url', 'origin'], { cwd });
+    if (result.exitCode !== 0) return null;
+    return result.stdout.trim() || null;
   } catch {
     return null;
   }
