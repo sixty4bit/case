@@ -73,7 +73,7 @@ export async function startOrchestratorSession(options: OrchestratorSessionOptio
     ] as unknown as ToolDefinition[],
   });
 
-  if (extensionsResult?.errors?.length) {
+  if (process.env.CASE_DEBUG && extensionsResult?.errors?.length) {
     for (const err of extensionsResult.errors) {
       process.stderr.write(`⚠ Extension error: ${err.path}\n  ${err.error}\n`);
     }
