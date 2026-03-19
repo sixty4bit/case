@@ -123,12 +123,17 @@ export async function executeFromIdeation(options: FromIdeationOptions): Promise
     if (existingTask.prUrl) {
       return { success: true, phases, prUrl: existingTask.prUrl, error: null };
     }
-    // TODO: Resume from correct phase. For now, report existing task.
+    // TODO: Re-entry support. The task JSON should gain a `completedPhases` field:
+    //   completedPhases?: Array<{ phase: number; specFile: string; commit: string | null }>
+    // Written after each successful executePhase(). On re-entry:
+    //   1. Skip spec phases already in completedPhases (resume implementer loop)
+    //   2. If completedPhases.length >= specFiles.length, skip to verifier/reviewer/closer
+    // For now, bail explicitly rather than risk re-running completed work.
     return {
       success: false,
       phases,
       prUrl: null,
-      error: `Existing task ${existingTask.id} found (status: ${existingTask.status}). Re-entry not yet supported in tool mode.`,
+      error: `Existing task ${existingTask.id} found (status: ${existingTask.status}). Re-entry not yet supported — re-run manually with a new task or complete the existing one.`,
     };
   }
 
