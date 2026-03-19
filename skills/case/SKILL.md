@@ -326,11 +326,7 @@ Report the failure to user via `AskUserQuestion`:
 
 ### Step 8: Complete
 
-1. Log the run:
-   ```bash
-   bash /Users/nicknisi/Developer/case/scripts/log-run.sh <task.json> completed
-   ```
-2. Report to user:
+1. Report to user:
    - PR URL from closer's `AGENT_RESULT`
    - Summary: what was done (from implementer), what was tested (from verifier), what was reviewed (from reviewer), PR link (from closer)
 
@@ -338,11 +334,7 @@ Report the failure to user via `AskUserQuestion`:
 
 **Always runs** — after both successful and failed pipelines, at every failure class (baseline, implementer, verifier, reviewer, closer). Every failure branch in steps 3-8 routes here explicitly. This is how the harness improves itself.
 
-1. Log the run (if not already logged in step 8):
-   ```bash
-   bash /Users/nicknisi/Developer/case/scripts/log-run.sh <task.json> <outcome> [failed-agent]
-   ```
-2. Read `/Users/nicknisi/Developer/case/agents/retrospective.md`
+1. Read `/Users/nicknisi/Developer/case/agents/retrospective.md`
 3. Use the `Agent` tool:
    - **prompt**: `<retrospective.md content>` + context:
      - Task file path (with progress log from all agents)
