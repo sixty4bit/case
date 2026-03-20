@@ -14,14 +14,14 @@ All repos use [Conventional Commits](https://www.conventionalcommits.org/).
 
 ### Types
 
-| Type | When to use |
-|------|------------|
-| `feat` | New feature or capability |
-| `fix` | Bug fix |
-| `chore` | Maintenance, deps, CI, tooling |
+| Type       | When to use                             |
+| ---------- | --------------------------------------- |
+| `feat`     | New feature or capability               |
+| `fix`      | Bug fix                                 |
+| `chore`    | Maintenance, deps, CI, tooling          |
 | `refactor` | Code restructuring (no behavior change) |
-| `docs` | Documentation only |
-| `test` | Test additions or fixes |
+| `docs`     | Documentation only                      |
+| `test`     | Test additions or fixes                 |
 
 ### Breaking Changes
 
@@ -45,13 +45,13 @@ Other repos (`authkit-session`, `authkit-tanstack-start`) use manual versioning 
 
 Scopes are optional but useful for multi-concern repos:
 
-| Repo | Common scopes |
-|------|--------------|
-| cli | `(main)` (release-please tag), framework names |
-| authkit-nextjs | `(deps)` for dependency updates |
-| authkit-tanstack-start | `(deps)`, `(readme)` |
-| authkit-session | none observed |
-| skills | none observed |
+| Repo                   | Common scopes                                  |
+| ---------------------- | ---------------------------------------------- |
+| cli                    | `(main)` (release-please tag), framework names |
+| authkit-nextjs         | `(deps)` for dependency updates                |
+| authkit-tanstack-start | `(deps)`, `(readme)`                           |
+| authkit-session        | none observed                                  |
+| skills                 | none observed                                  |
 
 ## Examples from Repo History
 

@@ -31,6 +31,8 @@ If the repo has a build step (`pnpm build`), run it to confirm the baseline is c
 
 ## Step 3: Reproduce the Bug
 
+> **`/case` pipeline note:** When running via the `/case` pipeline, bug reproduction is handled by the orchestrator (Step 3.5) _before_ the implementer is spawned. The implementer receives the root cause analysis and reproduction evidence, so it can skip to writing a failing test and implementing the fix.
+
 Write a failing test first if possible. This is the strongest form of reproduction.
 
 ```bash
@@ -42,13 +44,13 @@ If a test isn't feasible (e.g., environment-specific bug), document the reproduc
 
 ### Where to Look by Repo
 
-| Repo | Common bug locations |
-|------|---------------------|
-| `cli` | `src/commands/*.ts` (command logic), `src/lib/*.ts` (core), `src/utils/*.ts` (output/formatting) |
-| `authkit-session` | `src/core/AuthKitCore.ts` (JWT/refresh), `src/core/session/CookieSessionStorage.ts`, `src/service/AuthService.ts` |
-| `authkit-nextjs` | `src/middleware.ts`, `src/session.ts`, `src/auth.ts`, `src/authkit-callback-route.ts` |
+| Repo                     | Common bug locations                                                                                                    |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `cli`                    | `src/commands/*.ts` (command logic), `src/lib/*.ts` (core), `src/utils/*.ts` (output/formatting)                        |
+| `authkit-session`        | `src/core/AuthKitCore.ts` (JWT/refresh), `src/core/session/CookieSessionStorage.ts`, `src/service/AuthService.ts`       |
+| `authkit-nextjs`         | `src/middleware.ts`, `src/session.ts`, `src/auth.ts`, `src/authkit-callback-route.ts`                                   |
 | `authkit-tanstack-start` | `src/server/middleware.ts`, `src/server/storage.ts`, `src/server/server-functions.ts`, `src/client/AuthKitProvider.tsx` |
-| `skills` | `plugins/workos/skills/*/SKILL.md`, `scripts/eval/scorer.ts` |
+| `skills`                 | `plugins/workos/skills/*/SKILL.md`, `scripts/eval/scorer.ts`                                                            |
 
 ## Step 4: Identify Root Cause
 
@@ -82,11 +84,11 @@ Before opening a PR, the reviewer agent checks the diff against golden principle
 
 - All enforced invariants (TypeScript strict, tests pass, conventional commits, no secrets, etc.)
 - Advisory checks (file size, test coverage, one concern per PR)
-- Structured test output from `.case-tested` (fail count must be 0)
+- Structured test output from `.case/<task-slug>/tested` (fail count must be 0)
 
 Critical findings block PR creation. Warnings and info are posted as PR comments.
 
-Evidence: `.case-reviewed` marker (created by `scripts/mark-reviewed.sh` only if critical: 0).
+Evidence: `.case/<task-slug>/reviewed` marker (created by `scripts/mark-reviewed.sh` only if critical: 0).
 
 ## Step 8: Open PR
 
@@ -100,11 +102,11 @@ Evidence: `.case-reviewed` marker (created by `scripts/mark-reviewed.sh` only if
 
 Some bugs span repos. Common patterns:
 
-| Pattern | Example | Action |
-|---------|---------|--------|
-| Session logic bug | Token refresh fails in all frameworks | Fix in `authkit-session`, verify in framework repos |
-| SDK type mismatch | CLI breaks after `@workos-inc/node` update | Fix in `cli`, check if other repos import the same type |
-| Skill produces wrong output | Agent generates bad code from skill | Fix the SKILL.md or topic file, re-run eval |
+| Pattern                     | Example                                    | Action                                                  |
+| --------------------------- | ------------------------------------------ | ------------------------------------------------------- |
+| Session logic bug           | Token refresh fails in all frameworks      | Fix in `authkit-session`, verify in framework repos     |
+| SDK type mismatch           | CLI breaks after `@workos-inc/node` update | Fix in `cli`, check if other repos import the same type |
+| Skill produces wrong output | Agent generates bad code from skill        | Fix the SKILL.md or topic file, re-run eval             |
 
 If the bug originates in a shared dependency (`authkit-session`), you may need to open PRs in multiple repos. Use the [cross-repo update playbook](cross-repo-update.md) for coordination.
 
@@ -126,3 +128,5 @@ If the bug originates in a shared dependency (`authkit-session`), you may need t
 - **Skipping the test**. Every bug fix should add a test that would have caught the bug.
 - **Not checking related repos**. Session bugs often exist in multiple AuthKit packages.
 - **Bundling refactors with fixes**. Keep the fix commit separate from any cleanup.
+- **Calling redirect() in server actions to external URLs**. Next.js server actions run via fetch -- `redirect()` causes the browser to follow the HTTP redirect cross-origin, triggering CORS errors. Return the URL and let the client redirect via `window.location.href`.
+- **Forgetting async redirect guards**. `window.location.href = url` does not stop JS execution. If a `finally` block sets state (e.g., `setLoading(false)`), it will retrigger `useEffect` before navigation completes. Use a ref guard (`redirectingRef.current = true`) and bail out of callbacks while redirecting.

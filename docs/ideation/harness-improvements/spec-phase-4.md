@@ -21,15 +21,15 @@ The Codex article describes continuous "garbage collection" that catches drift e
 
 ### New Files
 
-| File Path | Purpose |
-| --- | --- |
-| `scripts/entropy-scan.sh` | `/loop`-compatible wrapper around `check.sh` — structured JSON output, always exits 0 |
-| `docs/conventions/entropy-management.md` | Documents the `/loop` workflow for continuous convention scanning |
+| File Path                                | Purpose                                                                               |
+| ---------------------------------------- | ------------------------------------------------------------------------------------- |
+| `scripts/entropy-scan.sh`                | `/loop`-compatible wrapper around `check.sh` — structured JSON output, always exits 0 |
+| `docs/conventions/entropy-management.md` | Documents the `/loop` workflow for continuous convention scanning                     |
 
 ### Modified Files
 
-| File Path | Changes |
-| --- | --- |
+| File Path                    | Changes                             |
+| ---------------------------- | ----------------------------------- |
 | `docs/conventions/README.md` | Add entry for entropy-management.md |
 
 ## Implementation Details
@@ -97,6 +97,7 @@ exit 0
 ```
 
 **Key decisions**:
+
 - Always exits 0 — `/loop` treats non-zero as "stop the schedule"
 - Status communicated via JSON `status` field (`clean` or `drift_detected`)
 - Failures listed as an array for agent consumption
@@ -104,12 +105,14 @@ exit 0
 - Uses node for JSON construction (consistent with other scripts)
 
 **Implementation steps**:
+
 1. Create `scripts/entropy-scan.sh`
 2. Make executable
 3. Test against available repos
 4. Test with `--repo` flag for single-repo scanning
 
 **Feedback loop**:
+
 - **Playground**: Run against case's target repos (whatever is checked out locally)
 - **Experiment**: Run with no args (all repos), with `--repo cli`, and with `--repo nonexistent`
 - **Check command**: `bash scripts/entropy-scan.sh | node -e "const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(d.status, d.passed + '/' + d.total)"`
@@ -118,7 +121,7 @@ exit 0
 
 **Overview**: Documents the entropy management workflow using `/loop` for session-scoped continuous scanning.
 
-```markdown
+````markdown
 # Entropy Management
 
 Convention drift happens. Agent-generated code replicates existing patterns,
@@ -131,6 +134,7 @@ Run a one-time scan across all repos:
 ```bash
 bash scripts/entropy-scan.sh
 ```
+````
 
 Scan a specific repo:
 
@@ -147,17 +151,18 @@ During active work sessions, use Claude Code's `/loop` to scan periodically:
 ```
 
 This runs every 30 minutes while your session is active. The scan:
+
 - Always exits 0 (won't break the loop)
 - Reports status as JSON (`clean` or `drift_detected`)
 - Lists specific failures for you to address
 
 ### Recommended intervals
 
-| Scenario | Interval | Command |
-| --- | --- | --- |
-| Active multi-repo work | 30m | `/loop 30m bash scripts/entropy-scan.sh` |
-| Focused single-repo work | 1h | `/loop 1h bash scripts/entropy-scan.sh --repo {name}` |
-| Background monitoring | 2h | `/loop 2h bash scripts/entropy-scan.sh` |
+| Scenario                 | Interval | Command                                               |
+| ------------------------ | -------- | ----------------------------------------------------- |
+| Active multi-repo work   | 30m      | `/loop 30m bash scripts/entropy-scan.sh`              |
+| Focused single-repo work | 1h       | `/loop 1h bash scripts/entropy-scan.sh --repo {name}` |
+| Background monitoring    | 2h       | `/loop 2h bash scripts/entropy-scan.sh`               |
 
 ### Limitations
 
@@ -181,11 +186,13 @@ See `docs/golden-principles.md` for the full list of invariants.
 ## Acting on Drift
 
 When drift is detected:
+
 1. Read the failures array in the JSON output
 2. Fix the lowest-effort issues first (commit format, missing fields)
 3. For structural issues (file sizes, missing tests), create a task in `tasks/active/`
 4. Run `check.sh --repo {name}` to verify fixes
-```
+
+````
 
 **Implementation steps**:
 1. Create `docs/conventions/entropy-management.md`
@@ -223,7 +230,7 @@ bash scripts/entropy-scan.sh --repo nonexistent_repo; echo "Exit code: $?"
 
 # Verify docs linked
 grep -q "entropy-management" docs/conventions/README.md && echo "PASS" || echo "FAIL"
-```
+````
 
 ---
 

@@ -23,23 +23,23 @@ Scripts and hooks are updated to read/write the JSON companion instead of moving
 
 ### New Files
 
-| File Path | Purpose |
-|-----------|---------|
-| `tasks/task.schema.json` | JSON Schema for `.task.json` companion files |
+| File Path                | Purpose                                                    |
+| ------------------------ | ---------------------------------------------------------- |
+| `tasks/task.schema.json` | JSON Schema for `.task.json` companion files               |
 | `scripts/task-status.sh` | Read/update task JSON fields (status, agent phases, flags) |
 
 ### Modified Files
 
-| File Path | Changes |
-|-----------|---------|
-| `tasks/README.md` | Document new hybrid format (Markdown + JSON companion), status lifecycle, progress log section |
-| `tasks/templates/bug-fix.md` | Add `## Progress Log` section, update checklist references |
-| `tasks/templates/cli-command.md` | Add `## Progress Log` section |
-| `tasks/templates/authkit-framework.md` | Add `## Progress Log` section |
-| `tasks/templates/cross-repo-update.md` | Add `## Progress Log` section |
-| `hooks/post-pr-cleanup.sh` | Update status in JSON companion instead of moving files; still clean up marker files |
-| `scripts/mark-tested.sh` | Add: read `.case-active` for task ID, update `.task.json` `tested` → `true` via `task-status.sh` |
-| `scripts/mark-manual-tested.sh` | Add: read `.case-active` for task ID, update `.task.json` `manualTested` → `true` via `task-status.sh` |
+| File Path                              | Changes                                                                                                |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `tasks/README.md`                      | Document new hybrid format (Markdown + JSON companion), status lifecycle, progress log section         |
+| `tasks/templates/bug-fix.md`           | Add `## Progress Log` section, update checklist references                                             |
+| `tasks/templates/cli-command.md`       | Add `## Progress Log` section                                                                          |
+| `tasks/templates/authkit-framework.md` | Add `## Progress Log` section                                                                          |
+| `tasks/templates/cross-repo-update.md` | Add `## Progress Log` section                                                                          |
+| `hooks/post-pr-cleanup.sh`             | Update status in JSON companion instead of moving files; still clean up marker files                   |
+| `scripts/mark-tested.sh`               | Add: read `.case-active` for task ID, update `.task.json` `tested` → `true` via `task-status.sh`       |
+| `scripts/mark-manual-tested.sh`        | Add: read `.case-active` for task ID, update `.task.json` `manualTested` → `true` via `task-status.sh` |
 
 ## Implementation Details
 

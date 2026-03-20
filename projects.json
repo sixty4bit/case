@@ -3,6 +3,7 @@
   "repos": [
     {
       "name": "cli",
+      "type": "library",
       "path": "../cli/main",
       "remote": "git@github.com:workos/workos-cli.git",
       "description": "WorkOS CLI for installing AuthKit integrations and managing WorkOS resources",
@@ -18,9 +19,10 @@
     },
     {
       "name": "skills",
+      "type": "library",
       "path": "../skills",
       "remote": "git@github.com:workos/skills.git",
-      "description": "Claude Code plugin providing WorkOS integration skills",
+      "description": "WorkOS integration skills",
       "language": "typescript",
       "packageManager": "pnpm",
       "commands": {
@@ -32,6 +34,7 @@
     },
     {
       "name": "authkit-session",
+      "type": "library",
       "path": "../authkit-session",
       "remote": "git@github.com:workos/authkit-ssr.git",
       "description": "Framework-agnostic TypeScript authentication library for WorkOS with pluggable storage adapters",
@@ -74,6 +77,23 @@
         "lint": "pnpm run lint",
         "typecheck": "pnpm run typecheck",
         "format": "pnpm run format"
+      }
+    },
+    {
+      "name": "workos-node",
+      "type": "library",
+      "path": "../workos-node/main",
+      "remote": "git@github.com:workos/workos-node.git",
+      "description": "WorkOS SDK for Node/JavaScript/TypeScript projects",
+      "language": "typescript",
+      "packageManager": "npm",
+      "commands": {
+        "setup": "npm install",
+        "build": "npm run build",
+        "test": "npm test",
+        "lint": "npm run lint",
+        "typecheck": "npm run typecheck",
+        "format": "npm run format"
       }
     }
   ]

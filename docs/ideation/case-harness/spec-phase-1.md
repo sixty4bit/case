@@ -23,18 +23,18 @@ The task system directory structure is created here, along with a documented tas
 
 ### New Files
 
-| File Path | Purpose |
-| --- | --- |
-| `AGENTS.md` | Workspace-level routing map for agents (~100 lines) |
-| `CLAUDE.md` | Instructions for agents working on case/ itself |
-| `projects.json` | Manifest of all target repos with metadata |
-| `projects.schema.json` | JSON Schema for the manifest (validates structure) |
-| `tasks/README.md` | Task file format specification and naming conventions |
-| `tasks/active/.gitkeep` | Empty dir for active task files |
-| `tasks/done/.gitkeep` | Empty dir for completed task files |
-| `tasks/templates/.gitkeep` | Empty dir for task templates (populated in Phase 4) |
-| `docs/.gitkeep` | Empty dir for knowledge base (populated in Phase 3) |
-| `scripts/.gitkeep` | Empty dir for enforcement scripts (populated in Phase 5) |
+| File Path                  | Purpose                                                  |
+| -------------------------- | -------------------------------------------------------- |
+| `AGENTS.md`                | Workspace-level routing map for agents (~100 lines)      |
+| `CLAUDE.md`                | Instructions for agents working on case/ itself          |
+| `projects.json`            | Manifest of all target repos with metadata               |
+| `projects.schema.json`     | JSON Schema for the manifest (validates structure)       |
+| `tasks/README.md`          | Task file format specification and naming conventions    |
+| `tasks/active/.gitkeep`    | Empty dir for active task files                          |
+| `tasks/done/.gitkeep`      | Empty dir for completed task files                       |
+| `tasks/templates/.gitkeep` | Empty dir for task templates (populated in Phase 4)      |
+| `docs/.gitkeep`            | Empty dir for knowledge base (populated in Phase 3)      |
+| `scripts/.gitkeep`         | Empty dir for enforcement scripts (populated in Phase 5) |
 
 ## Implementation Details
 
@@ -43,12 +43,14 @@ The task system directory structure is created here, along with a documented tas
 **Overview**: The single entry point for any agent landing in case/. Must be under 100 lines. Functions as a table of contents pointing to deeper sources of truth.
 
 **Key decisions**:
+
 - Map format, not prose — agents scan quickly
 - References docs/ paths even before those files exist (Phase 3 creates them)
 - Includes the project landscape inline (which repos, what they do) since this is the most frequently needed context
 - Points to task system for dispatch workflow
 
 **Implementation steps**:
+
 1. Write header identifying case as a harness for WorkOS OSS repos
 2. Add project landscape table (repo name, path, purpose, language/pm)
 3. Add navigation section pointing to docs/architecture/, docs/conventions/, docs/playbooks/, docs/golden-principles.md
@@ -57,6 +59,7 @@ The task system directory structure is created here, along with a documented tas
 6. Verify line count is under 100
 
 **Content structure**:
+
 ```markdown
 # Case — WorkOS OSS Harness
 
@@ -64,10 +67,10 @@ The task system directory structure is created here, along with a documented tas
 
 ## Projects
 
-| Repo | Path | Purpose | Stack |
-| --- | --- | --- | --- |
-| cli | ../cli/main | WorkOS CLI | TS/pnpm |
-| ... | ... | ... | ... |
+| Repo | Path        | Purpose    | Stack   |
+| ---- | ----------- | ---------- | ------- |
+| cli  | ../cli/main | WorkOS CLI | TS/pnpm |
+| ...  | ...         | ...        | ...     |
 
 ## Navigation
 
@@ -91,11 +94,13 @@ See: CLAUDE.md
 **Overview**: Instructions for agents working on case/ itself. This is where "never write code, only improve the harness" is encoded.
 
 **Key decisions**:
+
 - Distinct from AGENTS.md — CLAUDE.md is about improving case, AGENTS.md is about using case
 - Includes the philosophy: when an agent struggles, fix the harness
 - Documents the relationship to the skills plugin
 
 **Implementation steps**:
+
 1. Write project overview (case is a harness, spine/meta-repo pattern)
 2. Document the "never write code" philosophy
 3. List what belongs in case vs what belongs in individual repos
@@ -107,12 +112,14 @@ See: CLAUDE.md
 **Overview**: Machine-readable manifest of all target repos. Schema designed for 25+ repos but v1 populates 5.
 
 **Key decisions**:
+
 - JSON over TOML — parseable by agents and scripts without extra dependencies
 - Separate schema file for validation
 - Each repo entry includes: name, path (relative), remote, description, language, packageManager, and commands object (setup, test, lint, typecheck, build)
 - Commands are copy-paste ready — agents execute them directly
 
 **Implementation steps**:
+
 1. Define JSON Schema in projects.schema.json
 2. Populate projects.json with the 5 v1 repos
 3. Pull actual commands from each repo's existing CLAUDE.md / package.json
@@ -146,12 +153,14 @@ See: CLAUDE.md
 **Overview**: Specification for how task files are structured. Agents and humans both need to know the format.
 
 **Key decisions**:
+
 - Naming convention: `{repo}-{n}-{slug}.md` for single-repo, `x-{n}-{slug}.md` for cross-repo
 - Standard sections: Objective, Target Repos, Acceptance Criteria, Playbook Reference, Checklist
 - The checklist is the agent's progress tracker — items get checked off as work progresses
 - Task numbers are sequential per-prefix (cli-1, cli-2, authkit-1, x-1, etc.)
 
 **Implementation steps**:
+
 1. Document naming convention with examples
 2. Define required sections and their purpose
 3. Include a minimal example task file

@@ -9,6 +9,7 @@
 Create or upgrade AGENTS.md files in each of the 5 v1 target repos. Each AGENTS.md must be self-sufficient — an agent landing in that repo alone (without case/) should be able to do competent work. The files follow a standard structure but contain repo-specific content derived from deep reading of each codebase.
 
 Some repos already have CLAUDE.md files with useful content. The approach is:
+
 - If CLAUDE.md exists with good content → create AGENTS.md alongside it, migrating relevant content and adding missing sections. Keep CLAUDE.md for Claude Code-specific instructions if needed.
 - If no CLAUDE.md exists → create AGENTS.md from scratch.
 
@@ -34,9 +35,11 @@ The standard AGENTS.md structure for all repos:
 ## Do / Don't
 
 ### Do
+
 - {Pattern to follow with file reference}
 
 ### Don't
+
 - {Anti-pattern to avoid with explanation}
 
 ## PR Checklist
@@ -61,13 +64,13 @@ Each repo requires the agent to: read the codebase thoroughly, understand its pa
 
 ### New Files
 
-| File Path | Purpose |
-| --- | --- |
-| `../cli/main/AGENTS.md` | Agent instructions for the WorkOS CLI repo |
-| `../skills/AGENTS.md` | Agent instructions for the skills plugin repo (has existing CLAUDE.md) |
-| `../authkit-session/AGENTS.md` | Agent instructions for authkit-session (has existing CLAUDE.local.md) |
-| `../authkit-tanstack-start/AGENTS.md` | Agent instructions for authkit-tanstack-start |
-| `../authkit-nextjs/AGENTS.md` | Agent instructions for authkit-nextjs (has existing CLAUDE.md) |
+| File Path                             | Purpose                                                                |
+| ------------------------------------- | ---------------------------------------------------------------------- |
+| `../cli/main/AGENTS.md`               | Agent instructions for the WorkOS CLI repo                             |
+| `../skills/AGENTS.md`                 | Agent instructions for the skills plugin repo (has existing CLAUDE.md) |
+| `../authkit-session/AGENTS.md`        | Agent instructions for authkit-session (has existing CLAUDE.local.md)  |
+| `../authkit-tanstack-start/AGENTS.md` | Agent instructions for authkit-tanstack-start                          |
+| `../authkit-nextjs/AGENTS.md`         | Agent instructions for authkit-nextjs (has existing CLAUDE.md)         |
 
 ## Implementation Details
 
@@ -89,6 +92,7 @@ For each repo, the implementing agent must:
 **Existing context**: Has CLAUDE.md with good content — architecture (adapter pattern, event emitter), commands, conventions, and guides for adding new commands/resources.
 
 **Key patterns to document**:
+
 - Three adapters (CLI, Dashboard, Headless) subscribing to InstallerEventEmitter
 - OutputMode (human/json) resolved at startup
 - Non-TTY behavior and exit codes
@@ -103,6 +107,7 @@ For each repo, the implementing agent must:
 **Existing context**: Has CLAUDE.md with eval commands, project structure, key conventions.
 
 **Key patterns to document**:
+
 - Plugin structure (.claude-plugin/)
 - Hand-crafted AuthKit skills vs topic files
 - Router (workos/SKILL.md) handles discovery
@@ -117,6 +122,7 @@ For each repo, the implementing agent must:
 **Existing context**: Has CLAUDE.local.md with detailed overview, setup, testing, architecture.
 
 **Key patterns to document**:
+
 - Framework-agnostic design with pluggable storage adapters
 - WebCrypto API for encryption (Node >= 20)
 - Session lifecycle (create, refresh, revoke)
@@ -130,6 +136,7 @@ For each repo, the implementing agent must:
 **Existing context**: Need to explore — may or may not have CLAUDE.md.
 
 **Key patterns to document**:
+
 - TanStack Start-specific patterns (server functions, createServerFn)
 - How it consumes authkit-session
 - Middleware integration pattern
@@ -142,6 +149,7 @@ For each repo, the implementing agent must:
 **Existing context**: Has CLAUDE.md with architecture overview, commands, testing patterns.
 
 **Key patterns to document**:
+
 - Middleware-based authentication (src/middleware.ts)
 - Encrypted sessions with iron-session
 - Provider pattern (AuthKitProvider)
@@ -153,6 +161,7 @@ For each repo, the implementing agent must:
 ## Testing Requirements
 
 Per repo, verify:
+
 - [ ] All commands listed in AGENTS.md actually work when run
 - [ ] Project structure section matches actual directory layout
 - [ ] Architecture section accurately describes the codebase

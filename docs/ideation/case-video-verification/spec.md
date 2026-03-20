@@ -11,11 +11,11 @@ Wire `playwright-cli video-start` / `video-stop` into the verifier agent's workf
 
 ### Modified Files
 
-| File Path | Changes |
-|-----------|---------|
-| `agents/verifier.md` | Add video-start before test flow, video-stop after, upload .webm, include video tag in progress log |
-| `agents/closer.md` | Reference video from verifier's progress log in PR description |
-| `skills/case/SKILL.md` | Update Verification Tools section to document video recording with playwright-cli |
+| File Path              | Changes                                                                                             |
+| ---------------------- | --------------------------------------------------------------------------------------------------- |
+| `agents/verifier.md`   | Add video-start before test flow, video-stop after, upload .webm, include video tag in progress log |
+| `agents/closer.md`     | Reference video from verifier's progress log in PR description                                      |
+| `skills/case/SKILL.md` | Update Verification Tools section to document video recording with playwright-cli                   |
 
 ## Implementation Details
 
@@ -59,15 +59,19 @@ Wire `playwright-cli video-start` / `video-stop` into the verifier agent's workf
 
 1. Read current `agents/closer.md`
 2. Update the PR body template to include video:
+
    ```markdown
    ## Verification
 
    ### Video
+
    <video tag from verifier>
 
    ### Screenshots
+
    <screenshot tags from verifier>
    ```
+
 3. In "### 1. Gather context", add: read video tags from the verifier's progress log entry (look for `<video` tags or `.webm` references)
 
 ### SKILL.md Video Documentation

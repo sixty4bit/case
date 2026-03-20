@@ -8,9 +8,10 @@
 
 Build the playbooks (step-by-step agent-executable plans for recurring operations) and task templates (pre-filled task files that encode the decisions a playbook requires). Together, these are what make "queue work, review PRs" possible — the human fills in a template, drops it in tasks/active/, and an agent executes it.
 
-Playbooks live in `docs/playbooks/` and are reference documentation. Task templates live in `tasks/templates/` and are fill-in-the-blank files agents execute against. A playbook explains the *why* and *how*. A task template is the *what* — scoped to a specific instance.
+Playbooks live in `docs/playbooks/` and are reference documentation. Task templates live in `tasks/templates/` and are fill-in-the-blank files agents execute against. A playbook explains the _why_ and _how_. A task template is the _what_ — scoped to a specific instance.
 
 The playbook set for v1:
+
 1. **Add CLI command** — add a new resource command to the CLI
 2. **Add AuthKit framework** — create a new AuthKit integration for a framework
 3. **Fix a bug** — triage and fix a bug in any target repo
@@ -30,17 +31,17 @@ Each playbook gets a corresponding task template.
 
 ### New Files
 
-| File Path | Purpose |
-| --- | --- |
-| `docs/playbooks/add-cli-command.md` | Step-by-step guide for adding a CLI command |
+| File Path                                 | Purpose                                                  |
+| ----------------------------------------- | -------------------------------------------------------- |
+| `docs/playbooks/add-cli-command.md`       | Step-by-step guide for adding a CLI command              |
 | `docs/playbooks/add-authkit-framework.md` | Step-by-step guide for new AuthKit framework integration |
-| `docs/playbooks/fix-bug.md` | Step-by-step guide for triaging and fixing a bug |
-| `docs/playbooks/cross-repo-update.md` | Step-by-step guide for coordinated cross-repo changes |
-| `docs/playbooks/README.md` | Index of playbooks |
-| `tasks/templates/cli-command.md` | Task template for adding a CLI command |
-| `tasks/templates/authkit-framework.md` | Task template for new AuthKit framework |
-| `tasks/templates/bug-fix.md` | Task template for bug fixes |
-| `tasks/templates/cross-repo-update.md` | Task template for cross-repo changes |
+| `docs/playbooks/fix-bug.md`               | Step-by-step guide for triaging and fixing a bug         |
+| `docs/playbooks/cross-repo-update.md`     | Step-by-step guide for coordinated cross-repo changes    |
+| `docs/playbooks/README.md`                | Index of playbooks                                       |
+| `tasks/templates/cli-command.md`          | Task template for adding a CLI command                   |
+| `tasks/templates/authkit-framework.md`    | Task template for new AuthKit framework                  |
+| `tasks/templates/bug-fix.md`              | Task template for bug fixes                              |
+| `tasks/templates/cross-repo-update.md`    | Task template for cross-repo changes                     |
 
 ## Implementation Details
 
@@ -51,6 +52,7 @@ Each playbook gets a corresponding task template.
 **Overview**: Detailed guide for adding a new resource command to the WorkOS CLI. References docs/architecture/cli.md for the architectural context.
 
 **Key content**:
+
 - Prerequisites: what to know before starting (API endpoint exists, resource schema)
 - Step 1: Create src/commands/{resource}.ts following patterns in organization.ts
 - Step 2: Create src/commands/{resource}.spec.ts with JSON mode tests
@@ -61,6 +63,7 @@ Each playbook gets a corresponding task template.
 - Verification checklist
 
 **Implementation steps**:
+
 1. Read docs/architecture/cli.md (from Phase 3) for context
 2. Read existing CLI commands (organization.ts, user.ts) as examples
 3. Write step-by-step playbook with concrete file paths and code patterns
@@ -73,6 +76,7 @@ Each playbook gets a corresponding task template.
 **Overview**: Guide for creating a new AuthKit integration for a framework (e.g., Remix, Nuxt, SolidStart).
 
 **Key content**:
+
 - Prerequisites: framework familiarity, authkit-session understanding
 - Step 1: Scaffold repo structure (mirror authkit-nextjs layout)
 - Step 2: Implement session adapter using authkit-session
@@ -88,6 +92,7 @@ Each playbook gets a corresponding task template.
 **Overview**: Generic playbook for triaging and fixing a bug in any target repo.
 
 **Key content**:
+
 - Step 1: Read the issue/report — understand the expected vs actual behavior
 - Step 2: Identify the target repo from the issue context
 - Step 3: Read the repo's AGENTS.md for setup and architecture
@@ -103,6 +108,7 @@ Each playbook gets a corresponding task template.
 **Overview**: Guide for making a coordinated change across multiple repos (e.g., update README badges, add new shared convention, update dependency versions).
 
 **Key content**:
+
 - Step 1: Define the change and affected repos (reference projects.json)
 - Step 2: Create per-repo task files (or one x-prefixed cross-repo task)
 - Step 3: For each repo — read AGENTS.md, make change, run checks, open PR
@@ -115,22 +121,28 @@ Each playbook gets a corresponding task template.
 Each template follows the format defined in tasks/README.md (Phase 1). Templates include placeholder fields wrapped in `{curly braces}` that the human fills in.
 
 **CLI Command template** (`tasks/templates/cli-command.md`):
+
 ```markdown
 # Add CLI Command: {command-name}
 
 ## Objective
+
 Add `workos {command-name}` command to the CLI.
 
 ## Target Repos
+
 - ../cli/main
 
 ## Playbook
+
 docs/playbooks/add-cli-command.md
 
 ## Context
+
 {Describe what this command does, what API endpoint it calls, expected input/output}
 
 ## Acceptance Criteria
+
 - [ ] Command registered and appears in help
 - [ ] Subcommands: {list, get, create, update, delete — specify which}
 - [ ] JSON output mode works
@@ -138,6 +150,7 @@ docs/playbooks/add-cli-command.md
 - [ ] Types check
 
 ## Checklist
+
 - [ ] Read playbook and architecture doc
 - [ ] Create command file
 - [ ] Create spec file
@@ -148,28 +161,35 @@ docs/playbooks/add-cli-command.md
 ```
 
 **Bug fix template** (`tasks/templates/bug-fix.md`):
+
 ```markdown
 # Fix: {brief description}
 
 ## Objective
+
 {What's broken and what the fix should achieve}
 
 ## Target Repos
+
 - {../repo-path}
 
 ## Playbook
+
 docs/playbooks/fix-bug.md
 
 ## Issue Reference
+
 {GitHub issue URL or description}
 
 ## Acceptance Criteria
+
 - [ ] Bug is reproducible with a test
 - [ ] Fix addresses root cause
 - [ ] No regressions (all existing tests pass)
 - [ ] New test prevents recurrence
 
 ## Checklist
+
 - [ ] Read repo AGENTS.md
 - [ ] Reproduce bug
 - [ ] Write failing test

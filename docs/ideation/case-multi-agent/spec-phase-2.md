@@ -17,11 +17,11 @@ Additionally, every agent must end its response with a structured `AGENT_RESULT`
 
 ### New Files
 
-| File Path | Purpose |
-|-----------|---------|
-| `agents/implementer.md` | Subagent prompt: code changes + unit tests in target repo |
-| `agents/verifier.md` | Subagent prompt: manual testing, Playwright, evidence markers, screenshots |
-| `agents/closer.md` | Subagent prompt: PR creation with proper description, hook satisfaction |
+| File Path               | Purpose                                                                    |
+| ----------------------- | -------------------------------------------------------------------------- |
+| `agents/implementer.md` | Subagent prompt: code changes + unit tests in target repo                  |
+| `agents/verifier.md`    | Subagent prompt: manual testing, Playwright, evidence markers, screenshots |
+| `agents/closer.md`      | Subagent prompt: PR creation with proper description, hook satisfaction    |
 
 ## Implementation Details
 
@@ -35,7 +35,7 @@ Additionally, every agent must end its response with a structured `AGENT_RESULT`
 ---
 name: implementer
 description: Focused code implementation agent for /case. Writes fixes, runs unit tests, commits. Does not handle manual testing, evidence, or PRs.
-tools: ["Read", "Edit", "Write", "Bash", "Glob", "Grep"]
+tools: ['Read', 'Edit', 'Write', 'Bash', 'Glob', 'Grep']
 ---
 ```
 
@@ -82,13 +82,13 @@ tools: ["Read", "Edit", "Write", "Bash", "Glob", "Grep"]
 ---
 name: verifier
 description: Fresh-context verification agent for /case. Reads the diff, tests the specific fix with Playwright, creates evidence markers and screenshots. Never implements.
-tools: ["Read", "Bash", "Glob", "Grep"]
+tools: ['Read', 'Bash', 'Glob', 'Grep']
 ---
 ```
 
 **Key decisions**:
 
-- Verifier reads the diff first, not the implementation — it should understand *what changed* before testing
+- Verifier reads the diff first, not the implementation — it should understand _what changed_ before testing
 - Verifier loads the `playwright-cli` skill for browser testing
 - Verifier reads test credentials from `~/.config/case/credentials` (never logs them)
 - Verifier must test the **specific fix scenario**, not just sign-in/sign-out. It reads the issue details from the task file to understand what to reproduce.
@@ -141,7 +141,7 @@ tools: ["Read", "Bash", "Glob", "Grep"]
 ---
 name: closer
 description: PR creation agent for /case. Drafts thorough PR descriptions from task file and verification evidence. Satisfies pre-PR hook gates. Never implements or tests.
-tools: ["Read", "Bash", "Glob", "Grep"]
+tools: ['Read', 'Bash', 'Glob', 'Grep']
 ---
 ```
 

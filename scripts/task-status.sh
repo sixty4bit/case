@@ -23,7 +23,7 @@ EXTRA="${4:-}"
 if [[ -z "$TASK_FILE" || -z "$FIELD" ]]; then
   echo "Usage: task-status.sh <task.json> <field> [value] [--from-marker]" >&2
   echo "" >&2
-  echo "Fields: status, id, repo, issue, issueType, branch, tested, manualTested, prUrl, prNumber" >&2
+  echo "Fields: status, id, repo, issue, issueType, branch, tested, manualTested, prUrl, prNumber, contractPath" >&2
   echo "Special: agent <name> <started|completed|status> [value]" >&2
   exit 1
 fi
@@ -133,7 +133,7 @@ import json, os, sys
 TRANSITIONS = {
     'active': ['implementing'],
     'implementing': ['verifying', 'active'],
-    'verifying': ['reviewing', 'implementing'],
+    'verifying': ['reviewing', 'closing', 'implementing'],
     'reviewing': ['closing', 'verifying'],
     'closing': ['pr-opened', 'verifying'],
     'pr-opened': ['pr-opened', 'merged'],
@@ -192,7 +192,7 @@ if field in readonly:
     print(f'Error: field \"{field}\" is read-only', file=sys.stderr)
     sys.exit(1)
 
-known = ('prUrl', 'prNumber', 'tested', 'manualTested', 'issue', 'issueType', 'branch')
+known = ('prUrl', 'prNumber', 'tested', 'manualTested', 'issue', 'issueType', 'branch', 'contractPath', 'checkCommand', 'checkBaseline', 'checkTarget', 'mode')
 if field not in data and field not in known:
     print(f'Error: unknown field \"{field}\"', file=sys.stderr)
     sys.exit(1)

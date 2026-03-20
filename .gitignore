@@ -1,7 +1,19 @@
-# Case harness marker files (created by /case skill, cleaned up by hooks)
+# Case harness marker files (created during pipeline runs)
 .case-active
 .case-tested
 .case-manual-tested
+.case-reviewed
 
-# Local project manifest (copy from projects.example.json and customize paths)
-projects.json
+# Active tasks (ephemeral per-run state, moved to tasks/done/ after merge)
+tasks/active/
+
+# Proposed amendments (staged for human review, not committed until approved)
+docs/proposed-amendments/*.md
+!docs/proposed-amendments/.gitkeep
+
+# Run log (append-only, machine-generated)
+docs/run-log.jsonl
+
+# Build artifacts
+node_modules/
+dist/

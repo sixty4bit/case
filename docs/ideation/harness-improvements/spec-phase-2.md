@@ -21,17 +21,17 @@ The Anthropic article identified this as the single highest-leverage interventio
 
 ### New Files
 
-| File Path | Purpose |
-| --- | --- |
+| File Path                  | Purpose                                                                  |
+| -------------------------- | ------------------------------------------------------------------------ |
 | `scripts/session-start.sh` | Session initialization script — gathers context, outputs structured JSON |
 
 ### Modified Files
 
-| File Path | Changes |
-| --- | --- |
-| `agents/implementer.md` | Add session-start as step 0 in Setup workflow |
-| `agents/verifier.md` | Add session-start as step 0 in Assess workflow |
-| `agents/closer.md` | Add session-start as step 0 in Gather Context workflow |
+| File Path                 | Changes                                                      |
+| ------------------------- | ------------------------------------------------------------ |
+| `agents/implementer.md`   | Add session-start as step 0 in Setup workflow                |
+| `agents/verifier.md`      | Add session-start as step 0 in Assess workflow               |
+| `agents/closer.md`        | Add session-start as step 0 in Gather Context workflow       |
 | `agents/retrospective.md` | Add session-start as step 0 in Read the Full Record workflow |
 
 ## Implementation Details
@@ -64,6 +64,7 @@ cd "$REPO_PATH"
 ```
 
 **Output structure**:
+
 ```json
 {
   "repo": {
@@ -97,6 +98,7 @@ cd "$REPO_PATH"
 ```
 
 **Key decisions**:
+
 - Output JSON (not YAML or plain text) so agents can parse it programmatically if needed
 - Use node for JSON construction (reliable escaping, available everywhere)
 - Task context is optional — works without `--task` flag for ad-hoc use
@@ -104,6 +106,7 @@ cd "$REPO_PATH"
 - Non-destructive — only reads, never writes
 
 **Implementation steps**:
+
 1. Create script with argument parsing (repo path, optional --task)
 2. Gather git context: branch, last 5 commits, uncommitted changes, on-main check
 3. Gather evidence: check for `.case-tested`, `.case-manual-tested`, `.case-active`
@@ -112,6 +115,7 @@ cd "$REPO_PATH"
 6. Output as JSON via node
 
 **Feedback loop**:
+
 - **Playground**: Run against the case repo itself (it's a git repo with known state)
 - **Experiment**: Run with no args (default cwd), with explicit repo path, with `--task` pointing to an existing task JSON, and with `--task` pointing to a nonexistent file
 - **Check command**: `bash scripts/session-start.sh . | node -e "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'))" && echo "Valid JSON"`
@@ -124,17 +128,20 @@ cd "$REPO_PATH"
 
 For each agent file, insert before the existing first numbered step:
 
-```markdown
+````markdown
 ### 0. Session Context
 
 Run the session-start script to orient yourself:
+
 ```bash
 SESSION=$(bash ${CASE_REPO}/scripts/session-start.sh <target-repo-path> --task <task.json>)
 echo "$SESSION"
 ```
+````
 
 Read the output to understand: current branch, last commits, task status, which agents have run, and what evidence exists. This replaces manual git log / task file discovery.
-```
+
+````
 
 **Key decisions**:
 - Step 0 (not renumbering existing steps) to minimize diff and preserve existing playbook references
@@ -178,7 +185,7 @@ bash scripts/session-start.sh . --task ${CASE_REPO}/tasks/active/authkit-nextjs-
 for f in agents/implementer.md agents/verifier.md agents/closer.md agents/retrospective.md; do
   grep -q "session-start" "$f" && echo "PASS: $f" || echo "FAIL: $f"
 done
-```
+````
 
 ---
 

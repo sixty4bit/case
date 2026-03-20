@@ -10,6 +10,7 @@ Create a reviewer agent role (`agents/reviewer.md`) that sits between verifier a
 This evolves the existing `ideation:reviewer` subagent type concept — the reviewer role definition tells the orchestrator when and how to invoke review, while the actual diff analysis can leverage the `ideation:reviewer` subagent for structured finding generation.
 
 The reviewer introduces two enforcement points:
+
 1. **Pre-PR gate**: `.case-reviewed` marker must exist (added to `pre-pr-check.sh`)
 2. **Post-PR comments**: Findings posted via `gh api` after PR creation
 
@@ -25,17 +26,17 @@ The reviewer introduces two enforcement points:
 
 ### New Files
 
-| File Path | Purpose |
-| --- | --- |
-| `agents/reviewer.md` | Reviewer agent role definition — reads diff, checks golden principles, produces findings |
-| `scripts/mark-reviewed.sh` | Creates `.case-reviewed` evidence marker with review findings summary |
+| File Path                  | Purpose                                                                                  |
+| -------------------------- | ---------------------------------------------------------------------------------------- |
+| `agents/reviewer.md`       | Reviewer agent role definition — reads diff, checks golden principles, produces findings |
+| `scripts/mark-reviewed.sh` | Creates `.case-reviewed` evidence marker with review findings summary                    |
 
 ### Modified Files
 
-| File Path | Changes |
-| --- | --- |
+| File Path               | Changes                                                                    |
+| ----------------------- | -------------------------------------------------------------------------- |
 | `hooks/pre-pr-check.sh` | Add Check 5: `.case-reviewed` marker must exist when `.case-active` is set |
-| `agents/closer.md` | Add step to post review findings as PR comments after PR creation |
+| `agents/closer.md`      | Add step to post review findings as PR comments after PR creation          |
 
 ## Implementation Details
 
@@ -49,7 +50,7 @@ The reviewer introduces two enforcement points:
 ---
 name: reviewer
 description: Code review agent for /case. Reads the diff against golden principles and structured test output. Produces findings that gate PR creation (critical) or inform via PR comments (warning/info). Never implements or tests.
-tools: ["Read", "Bash", "Glob", "Grep"]
+tools: ['Read', 'Bash', 'Glob', 'Grep']
 ---
 ```
 
@@ -80,12 +81,14 @@ tools: ["Read", "Bash", "Glob", "Grep"]
 6. **Output** — AGENT_RESULT with findings array in summary
 
 **Key decisions**:
+
 - Reviewer does NOT fix code — it only flags issues. If critical findings exist, the orchestrator re-dispatches the implementer.
 - Reviewer reads golden principles every time (they may have been updated by a retrospective)
 - Critical findings include the specific principle violated and the file/line
 - `.case-reviewed` is only created when 0 critical findings exist
 
 **Implementation steps**:
+
 1. Create `agents/reviewer.md` with YAML frontmatter matching the pattern
 2. Write the full workflow following verifier.md's structure
 3. Define the findings classification with examples
@@ -93,6 +96,7 @@ tools: ["Read", "Bash", "Glob", "Grep"]
 5. Add Rules section
 
 **Feedback loop**:
+
 - **Playground**: Read the file and verify structure matches other agent files
 - **Experiment**: Compare structure against `agents/verifier.md` — same sections, same AGENT_RESULT format, same rules patterns
 - **Check command**: `head -5 agents/reviewer.md | grep -q "^name: reviewer" && echo "PASS" || echo "FAIL"`
@@ -153,17 +157,20 @@ fi
 ```
 
 **Key decisions**:
+
 - Fails hard if `--critical > 0` — the reviewer agent must resolve critical findings before calling this
 - Follows same task JSON update pattern as mark-tested.sh and mark-manual-tested.sh
 - Simple key-value format matching `.case-tested` conventions
 
 **Implementation steps**:
+
 1. Create `scripts/mark-reviewed.sh`
 2. Make executable
 3. Test with 0 critical (should succeed)
 4. Test with >0 critical (should fail)
 
 **Feedback loop**:
+
 - **Playground**: Run the script directly with various argument combinations
 - **Experiment**: Test with `--critical 0 --warnings 2 --info 1` (should create marker), `--critical 1` (should fail), and no args (should create marker with all zeros)
 - **Check command**: `bash scripts/mark-reviewed.sh --critical 0 --warnings 1 --info 2 && cat .case-reviewed && rm .case-reviewed`
@@ -188,11 +195,13 @@ fi
 ```
 
 **Key decisions**:
+
 - Always required (not conditional like manual testing) — every PR should be reviewed
 - Checks for `critical: 0` in the marker, not just file existence
 - Placed after manual testing check to maintain logical ordering
 
 **Implementation steps**:
+
 1. Read current `hooks/pre-pr-check.sh`
 2. Insert Check 5 block after Check 3's closing `fi`
 3. Verify syntax with `bash -n`
@@ -202,10 +211,11 @@ fi
 **Pattern to follow**: Existing Step 1 (Gather Context) reads evidence markers
 
 **Overview**: Add two updates to closer.md:
+
 1. In Step 1 (Gather Context): also read `.case-reviewed` for findings summary
 2. Add Step 4.5 (Post Review Comments): after PR creation, post warning/info findings as a PR review comment
 
-```markdown
+````markdown
 ### 4.5 Post Review Comments (if findings exist)
 
 If the reviewer produced warnings or info findings, post them as a PR comment:
@@ -226,9 +236,11 @@ gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews \
 _Automated review by case/reviewer agent_" \
   -f event="COMMENT"
 ```
+````
 
 Only post if there are actual findings to share. Skip this step if the reviewer had 0 warnings and 0 info.
-```
+
+````
 
 **Implementation steps**:
 1. Add `.case-reviewed` to the evidence reading list in Step 1
@@ -274,7 +286,7 @@ grep -q "case-reviewed" hooks/pre-pr-check.sh && echo "PASS: review gate added" 
 
 # Verify closer references reviewer
 grep -q "case-reviewed" agents/closer.md && echo "PASS: closer reads review" || echo "FAIL"
-```
+````
 
 ---
 

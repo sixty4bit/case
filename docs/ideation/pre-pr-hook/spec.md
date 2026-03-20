@@ -12,6 +12,7 @@ The PreToolUse hook uses a `matcher` for `Bash` tool calls. The hook script chec
 The marker file convention: the `/case` SKILL.md instructs agents to create marker files as they complete checklist steps. The hook then checks for these markers. This turns the soft checklist into a hard gate.
 
 Marker files:
+
 - `.case-active` — created by `/case` at workflow start. Signals that hooks should enforce.
 - `.case-tested` — created after running tests/typecheck/lint/build.
 - `.case-manual-tested` — created after playwright/example app testing.
@@ -30,18 +31,18 @@ All markers are plain files in the working directory. They're gitignored.
 
 ### New Files
 
-| File Path | Purpose |
-| --- | --- |
-| `hooks/hooks.json` | Hook configuration — declares PreToolUse and PostToolUse hooks |
-| `hooks/pre-pr-check.sh` | PreToolUse script — runs checks before `gh pr create` |
-| `hooks/post-pr-cleanup.sh` | PostToolUse script — cleans up marker files after PR success |
+| File Path                  | Purpose                                                        |
+| -------------------------- | -------------------------------------------------------------- |
+| `hooks/hooks.json`         | Hook configuration — declares PreToolUse and PostToolUse hooks |
+| `hooks/pre-pr-check.sh`    | PreToolUse script — runs checks before `gh pr create`          |
+| `hooks/post-pr-cleanup.sh` | PostToolUse script — cleans up marker files after PR success   |
 
 ### Modified Files
 
-| File Path | Changes |
-| --- | --- |
+| File Path              | Changes                                                             |
+| ---------------------- | ------------------------------------------------------------------- |
 | `skills/case/SKILL.md` | Add marker file creation to the workflow steps and pre-PR checklist |
-| `.gitignore` | Add `.case-active`, `.case-tested`, `.case-manual-tested` |
+| `.gitignore`           | Add `.case-active`, `.case-tested`, `.case-manual-tested`           |
 
 ## Implementation Details
 
@@ -103,6 +104,7 @@ All markers are plain files in the working directory. They're gitignored.
 7. If all pass: exit 0 (allow)
 
 **Error output format** (blocking):
+
 ```
 CASE PRE-PR CHECK FAILED
 
@@ -122,6 +124,7 @@ Resolve all failures above, then retry gh pr create.
 ```
 
 **Key decisions**:
+
 - Use `jq` for JSON parsing if available, fall back to `python3 -c` or grep
 - The manual testing check is smart: if `git diff --name-only HEAD~1` only shows non-src files (docs, config, CI), skip the `.case-manual-tested` requirement
 - Exit code 2 blocks the tool call in Claude Code hooks
@@ -131,6 +134,7 @@ Resolve all failures above, then retry gh pr create.
 **Overview**: After a successful `gh pr create`, cleans up all marker files.
 
 **Implementation steps**:
+
 1. Read stdin JSON, extract the command string
 2. Check if command contains `gh pr create` — if not, exit 0
 3. Delete `.case-active`, `.case-tested`, `.case-manual-tested` if they exist
@@ -141,11 +145,13 @@ Resolve all failures above, then retry gh pr create.
 **Add `.case-active` creation to the issue workflows**:
 
 In the GitHub issue workflow (step 4, after creating task file):
+
 ```
 Create a `.case-active` marker: `touch .case-active`
 ```
 
 In the Linear issue workflow (step 4, after creating task file):
+
 ```
 Create a `.case-active` marker: `touch .case-active`
 ```
@@ -158,6 +164,7 @@ After "Example app tested": add `then run: touch .case-manual-tested`
 ### .gitignore
 
 Create or update `.gitignore` to include:
+
 ```
 .case-active
 .case-tested

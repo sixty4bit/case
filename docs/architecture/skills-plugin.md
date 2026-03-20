@@ -4,7 +4,7 @@
 
 ## Overview
 
-The skills repo is a Claude Code plugin that provides WorkOS integration skills. It ships curated knowledge (AuthKit installation guides, API references, migration guides) to coding agents so they produce correct WorkOS implementations.
+The skills repo provides WorkOS integration skills. It ships curated knowledge (AuthKit installation guides, API references, migration guides) to coding agents so they produce correct WorkOS implementations.
 
 ## Plugin Structure
 
@@ -40,6 +40,7 @@ skills/
 ### Plugin Manifest
 
 `plugins/workos/.claude-plugin/plugin.json`:
+
 ```json
 {
   "name": "workos",
@@ -85,11 +86,13 @@ The main entry point. Contains tables mapping user intent to the correct skill o
 `plugins/workos/skills/workos/references/*.md`
 
 Lean files containing:
+
 - **Doc URLs** -- links to official WorkOS documentation (source of truth)
 - **Gotchas** -- non-obvious traps that LLMs commonly get wrong
 - **Endpoint tables** (optional) -- API reference for the topic
 
 Topic files are human-maintained. No generation pipeline. The pattern:
+
 > "If this file conflicts with fetched docs, follow the docs."
 
 Current topic files cover: SSO, Directory Sync, RBAC, Vault, Events, Audit Logs, Admin Portal, MFA, Email, Custom Domains, Integrations, plus migration guides for Auth0, Clerk, Firebase, Cognito, Stytch, Supabase, Descope, Better Auth.
@@ -130,15 +133,15 @@ pnpm eval:calibrate              # scorer vs human agreement
 
 ### Key Files
 
-| File | Purpose |
-|------|---------|
-| `scripts/eval.ts` | Main eval runner |
-| `scripts/eval/scorer.ts` | Composite scoring logic |
-| `scripts/eval/reporter.ts` | Results reporting |
-| `scripts/eval/triage.ts` | Risk triage report |
+| File                        | Purpose                     |
+| --------------------------- | --------------------------- |
+| `scripts/eval.ts`           | Main eval runner            |
+| `scripts/eval/scorer.ts`    | Composite scoring logic     |
+| `scripts/eval/reporter.ts`  | Results reporting           |
+| `scripts/eval/triage.ts`    | Risk triage report          |
 | `scripts/eval/calibrate.ts` | Scorer-vs-human calibration |
-| `scripts/eval/diff.ts` | Transcript diff viewer |
-| `scripts/eval-label.ts` | Human label tool |
+| `scripts/eval/diff.ts`      | Transcript diff viewer      |
+| `scripts/eval-label.ts`     | Human label tool            |
 
 ### Interpreting Results
 

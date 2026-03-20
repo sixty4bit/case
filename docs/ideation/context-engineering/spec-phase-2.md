@@ -25,16 +25,16 @@ The doom-loop hook follows the same pattern as existing hooks (`pre-pr-check.sh`
 
 ### New Files
 
-| File Path | Purpose |
-|-----------|---------|
+| File Path                   | Purpose                                                |
+| --------------------------- | ------------------------------------------------------ |
 | `hooks/doom-loop-detect.sh` | Detect repeated identical failures and block execution |
 
 ### Modified Files
 
-| File Path | Changes |
-|-----------|---------|
-| `hooks/hooks.json` | Add doom-loop-detect.sh to PostToolUse Bash hooks |
-| `agents/implementer.md` | Add WIP commit convention to workflow section |
+| File Path               | Changes                                           |
+| ----------------------- | ------------------------------------------------- |
+| `hooks/hooks.json`      | Add doom-loop-detect.sh to PostToolUse Bash hooks |
+| `agents/implementer.md` | Add WIP commit convention to workflow section     |
 
 ## Implementation Details
 
@@ -45,6 +45,7 @@ The doom-loop hook follows the same pattern as existing hooks (`pre-pr-check.sh`
 **Overview**: A PostToolUse hook on Bash commands that tracks consecutive failures. Uses a temp file (`.case-doom-loop-state`) to persist state across invocations within a single task session. The hook only activates when `.case-active` exists (same guard as other hooks).
 
 **Detection logic**:
+
 - After each Bash tool use, read the tool result from stdin JSON
 - If the command failed (non-zero exit), extract a normalized fingerprint (command + exit code + first line of stderr)
 - Compare to the previous failure fingerprint stored in `.case-doom-loop-state`
@@ -52,6 +53,7 @@ The doom-loop hook follows the same pattern as existing hooks (`pre-pr-check.sh`
 - If the command succeeded or the fingerprint changed, reset the counter
 
 **Key decisions**:
+
 - **Threshold of 3** — generous enough to allow legitimate retries (e.g., fixing a typo and re-running), strict enough to catch real doom loops. Can be tuned later.
 - **PostToolUse not PreToolUse** — we need to see the result to know if it failed. PostToolUse fires after the tool completes.
 - **Fingerprint uses command + exit code + first stderr line** — not the full output, which varies. This catches "same command, same error" patterns.
@@ -143,6 +145,7 @@ exit 0
 ```
 
 **Implementation steps**:
+
 1. Create `hooks/doom-loop-detect.sh` with the script above
 2. Run `bash -n hooks/doom-loop-detect.sh` to verify syntax
 3. Add to `hooks/hooks.json` PostToolUse Bash hooks array
@@ -158,7 +161,7 @@ exit 0
 
 **What to add** (insert before the existing "### 4. Record" section, as a new "### 3b. Checkpoint" step):
 
-```markdown
+````markdown
 ### 3b. Checkpoint (after each logical step)
 
 After each meaningful implementation step (e.g., test written, root cause fixed, validation passing), create a WIP commit:
@@ -166,6 +169,7 @@ After each meaningful implementation step (e.g., test written, root cause fixed,
 ```bash
 git add -A && git commit -m "wip: {what this step accomplished}"
 ```
+````
 
 WIP commits provide rollback points if a later step goes wrong. Before your final commit (step 4), squash all WIP commits into one clean conventional commit:
 
@@ -174,7 +178,8 @@ git reset --soft $(git merge-base HEAD main) && git add -A
 ```
 
 Then create the final commit as usual.
-```
+
+````
 
 **Key decisions**:
 - `wip:` prefix makes it clear these are intermediate, not final
@@ -230,7 +235,7 @@ grep "doom-loop-state" hooks/post-pr-cleanup.sh
 
 # Verify implementer has checkpoint section
 grep -c "Checkpoint" agents/implementer.md  # should be >= 1
-```
+````
 
 ---
 

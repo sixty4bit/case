@@ -6,13 +6,13 @@
 
 ## Dimensions
 
-| Dimension | Score | Notes |
-|---|---|---|
-| Scope clarity | 19/20 | All 10 files identified. Only `.case-active` format slightly ambiguous (Phase 3 responsibility). |
-| Pattern familiarity | 20/20 | `projects.schema.json` is the pattern for JSON Schema. Shell scripts follow existing conventions. |
-| Dependency awareness | 18/20 | post-pr-cleanup → task-status.sh, marker scripts → task-status.sh, pre-pr-check reads `.case-active` (unchanged). |
-| Edge case coverage | 17/20 | Backward compat (old-format fallback), transition validation, `--from-marker` guard. Missing: exhaustive invalid transition tests. |
-| Test strategy | 18/20 | Validation commands provided. Feedback loop via task-status.sh. No formal test framework but shell scripts are testable manually. |
+| Dimension            | Score | Notes                                                                                                                              |
+| -------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Scope clarity        | 19/20 | All 10 files identified. Only `.case-active` format slightly ambiguous (Phase 3 responsibility).                                   |
+| Pattern familiarity  | 20/20 | `projects.schema.json` is the pattern for JSON Schema. Shell scripts follow existing conventions.                                  |
+| Dependency awareness | 18/20 | post-pr-cleanup → task-status.sh, marker scripts → task-status.sh, pre-pr-check reads `.case-active` (unchanged).                  |
+| Edge case coverage   | 17/20 | Backward compat (old-format fallback), transition validation, `--from-marker` guard. Missing: exhaustive invalid transition tests. |
+| Test strategy        | 18/20 | Validation commands provided. Feedback loop via task-status.sh. No formal test framework but shell scripts are testable manually.  |
 
 ## Key Patterns
 

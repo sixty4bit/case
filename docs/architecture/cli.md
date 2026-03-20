@@ -21,13 +21,14 @@ bin.ts (yargs CLI entry)
 
 Three adapters implement `InstallerAdapter` (`src/lib/adapters/types.ts`):
 
-| Adapter | When selected | File |
-|---------|--------------|------|
-| `CLIAdapter` | Interactive TTY | `src/lib/adapters/cli-adapter.ts` |
+| Adapter            | When selected      | File                                    |
+| ------------------ | ------------------ | --------------------------------------- |
+| `CLIAdapter`       | Interactive TTY    | `src/lib/adapters/cli-adapter.ts`       |
 | `DashboardAdapter` | `--dashboard` flag | `src/lib/adapters/dashboard-adapter.ts` |
-| `HeadlessAdapter` | Non-TTY / CI | `src/lib/adapters/headless-adapter.ts` |
+| `HeadlessAdapter`  | Non-TTY / CI       | `src/lib/adapters/headless-adapter.ts`  |
 
 Selection logic in `src/lib/run-with-core.ts`:
+
 - `isNonInteractiveEnvironment()` --> HeadlessAdapter
 - `options.dashboard` --> DashboardAdapter
 - else --> CLIAdapter
@@ -50,12 +51,12 @@ Typed event system in `src/lib/events.ts`. Key event groups:
 
 Resolved once at startup in `src/utils/output.ts`:
 
-| Priority | Condition | Mode |
-|----------|-----------|------|
-| 1 | `--json` flag | `json` |
-| 2 | `WORKOS_FORCE_TTY=1` | `human` |
-| 3 | Non-TTY | `json` |
-| 4 | Default | `human` |
+| Priority | Condition            | Mode    |
+| -------- | -------------------- | ------- |
+| 1        | `--json` flag        | `json`  |
+| 2        | `WORKOS_FORCE_TTY=1` | `human` |
+| 3        | Non-TTY              | `json`  |
+| 4        | Default              | `human` |
 
 All output flows through `outputSuccess()`, `outputError()`, `outputTable()`, `outputJson()`.
 
@@ -64,6 +65,7 @@ All output flows through `outputSuccess()`, `outputError()`, `outputTable()`, `o
 Commands live in `src/commands/{resource}.ts` with co-located `{resource}.spec.ts`.
 
 Pattern (from `src/commands/organization.ts`):
+
 1. Export handler functions (`runOrgCreate`, `runOrgList`, etc.)
 2. Use `createWorkOSClient(apiKey)` for API calls
 3. Use `outputSuccess()`/`outputJson()` for output
@@ -85,6 +87,7 @@ Registration: Commands are registered in `src/bin.ts` via yargs and mirrored in 
 `src/lib/registry.ts` scans `src/integrations/` for directories with an `index.ts` exporting `{ config, run }`.
 
 Each integration module (`IntegrationModule`):
+
 - `config: FrameworkConfig` -- metadata, detection rules, priority
 - `run(options): Promise<string>` -- installer entry point
 
@@ -105,19 +108,19 @@ Example: `src/nextjs/nextjs-installer-agent.ts`
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `src/bin.ts` | CLI entry, yargs setup, all command registration |
-| `src/run.ts` | Installer entry, builds options |
-| `src/lib/run-with-core.ts` | XState machine setup, adapter selection |
-| `src/lib/events.ts` | `InstallerEventEmitter` + typed events |
-| `src/lib/installer-core.ts` | XState machine definition |
-| `src/lib/registry.ts` | Integration auto-discovery |
-| `src/lib/adapters/types.ts` | `InstallerAdapter` interface |
-| `src/utils/output.ts` | OutputMode resolution + formatters |
-| `src/utils/help-json.ts` | Machine-readable command tree |
-| `src/cli.config.ts` | Framework ports, model config, branding |
-| `src/lib/constants.ts` | `Integration` type, known integrations |
+| File                        | Purpose                                          |
+| --------------------------- | ------------------------------------------------ |
+| `src/bin.ts`                | CLI entry, yargs setup, all command registration |
+| `src/run.ts`                | Installer entry, builds options                  |
+| `src/lib/run-with-core.ts`  | XState machine setup, adapter selection          |
+| `src/lib/events.ts`         | `InstallerEventEmitter` + typed events           |
+| `src/lib/installer-core.ts` | XState machine definition                        |
+| `src/lib/registry.ts`       | Integration auto-discovery                       |
+| `src/lib/adapters/types.ts` | `InstallerAdapter` interface                     |
+| `src/utils/output.ts`       | OutputMode resolution + formatters               |
+| `src/utils/help-json.ts`    | Machine-readable command tree                    |
+| `src/cli.config.ts`         | Framework ports, model config, branding          |
+| `src/lib/constants.ts`      | `Integration` type, known integrations           |
 
 ## Exit Codes
 

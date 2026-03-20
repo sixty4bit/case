@@ -15,15 +15,15 @@ Numbers are sequential per prefix: `cli-1`, `cli-2`, `authkit-nextjs-1`, `x-1`, 
 
 ## Required Sections
 
-| Section | Purpose |
-| --- | --- |
-| Mission Summary | Blockquote at the very top (before `# Title`) with Mission, Repo, and Done-when — survives context compaction |
-| `# Title` | Brief description (becomes the task file name slug) |
-| `## Objective` | What needs to happen and why |
-| `## Target Repos` | Which repos this task touches (paths from projects.json) |
-| `## Playbook` | Reference to the relevant playbook in docs/playbooks/ (if one exists) |
-| `## Acceptance Criteria` | Checkboxes defining "done" — agent cannot mark done until these pass |
-| `## Checklist` | Step-by-step progress tracker — agent checks items off as it works |
+| Section                  | Purpose                                                                                                       |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| Mission Summary          | Blockquote at the very top (before `# Title`) with Mission, Repo, and Done-when — survives context compaction |
+| `# Title`                | Brief description (becomes the task file name slug)                                                           |
+| `## Objective`           | What needs to happen and why                                                                                  |
+| `## Target Repos`        | Which repos this task touches (paths from projects.json)                                                      |
+| `## Playbook`            | Reference to the relevant playbook in docs/playbooks/ (if one exists)                                         |
+| `## Acceptance Criteria` | Checkboxes defining "done" — agent cannot mark done until these pass                                          |
+| `## Checklist`           | Step-by-step progress tracker — agent checks items off as it works                                            |
 
 Optional: `## Context` for background info, issue links, API specs, etc.
 
@@ -33,7 +33,7 @@ Optional: `## Context` for background info, issue links, API specs, etc.
 2. Implementer writes the fix/feature, runs tests, commits
 3. Verifier tests the specific scenario with fresh context
 4. Reviewer checks the diff against golden principles and conventions
-5. Closer agent opens a PR in the target repo (requires `.case-reviewed` with critical: 0)
+5. Closer agent opens a PR in the target repo (requires `.case/<task-slug>/reviewed` with critical: 0)
 6. Post-PR hook updates `.task.json` status to `pr-opened`
 7. After PR merge, status updated to `merged` (manual or automation)
 
@@ -50,7 +50,9 @@ tasks/active/authkit-nextjs-1-issue-53.task.json   # machine-touched
 
 The JSON file stores structured metadata that agents and scripts update programmatically. Schema: `tasks/task.schema.json`.
 
-Fields: `id`, `status`, `created`, `repo`, `issue`, `issueType`, `branch`, `agents`, `tested`, `manualTested`, `prUrl`, `prNumber`.
+Fields: `id`, `status`, `created`, `repo`, `issue`, `issueType`, `branch`, `agents`, `tested`, `manualTested`, `prUrl`, `prNumber`, `contractPath`.
+
+Issue types: `github`, `linear`, `freeform`, `ideation`. Ideation tasks include `contractPath` pointing to the ideation contract.md.
 
 Read/write via: `bash ${CASE_REPO}/scripts/task-status.sh <file> <field> [value]`
 
@@ -58,13 +60,15 @@ Read/write via: `bash ${CASE_REPO}/scripts/task-status.sh <file> <field> [value]
 
 ### Evidence Markers
 
-| Marker | Created by | Purpose |
-| --- | --- | --- |
-| `.case-tested` | `scripts/mark-tested.sh` | Proves automated tests ran (hash of test output) |
-| `.case-manual-tested` | `scripts/mark-manual-tested.sh` | Proves manual/browser testing was performed |
-| `.case-reviewed` | `scripts/mark-reviewed.sh` | Proves code review passed (critical: 0) |
+Evidence markers live under `.case/<task-slug>/` in the target repo. The `.case/active` file contains the task slug. Add `.case/` to `.gitignore` (bootstrap does this automatically).
 
-#### `.case-tested` structured format
+| Marker                              | Created by                      | Purpose                                          |
+| ----------------------------------- | ------------------------------- | ------------------------------------------------ |
+| `.case/<task-slug>/tested`          | `scripts/mark-tested.sh`        | Proves automated tests ran (hash of test output) |
+| `.case/<task-slug>/manual-tested`   | `scripts/mark-manual-tested.sh` | Proves manual/browser testing was performed      |
+| `.case/<task-slug>/reviewed`        | `scripts/mark-reviewed.sh`      | Proves code review passed (critical: 0)          |
+
+#### `tested` structured format
 
 When piped JSON output from `vitest --reporter=json`, the marker contains structured fields parsed by `scripts/parse-test-output.sh`:
 
@@ -108,10 +112,12 @@ Every task file has a `## Progress Log` section at the end. Agents append entrie
 ## Progress Log
 
 ### Orchestrator — 2026-03-08T10:30:00Z
+
 - Created task from GitHub issue #53
 - Baseline smoke test: PASS
 
 ### Implementer — 2026-03-08T10:35:00Z
+
 - Root cause: hardcoded cookie name
 - Fix: use WORKOS_COOKIE_NAME env var
 - Tests: 4 passing, committed abc123
@@ -127,26 +133,32 @@ Every task file has a `## Progress Log` section at the end. Agents append entrie
 # Add `workos orgs list` command
 
 ## Objective
+
 Add an `orgs list` subcommand to the CLI that lists organizations
 in the current WorkOS environment.
 
 ## Target Repos
+
 - ../cli/main
 
 ## Playbook
+
 docs/playbooks/add-cli-command.md
 
 ## Context
+
 API endpoint: GET /organizations
 See: https://workos.com/docs/reference/organization/list
 
 ## Acceptance Criteria
+
 - [ ] `workos orgs list` outputs organizations in human-readable format
 - [ ] `workos orgs list --json` outputs valid JSON
 - [ ] Tests pass
 - [ ] Types check
 
 ## Checklist
+
 - [ ] Read playbook and CLI architecture doc
 - [ ] Create src/commands/organization.ts
 - [ ] Create src/commands/organization.spec.ts

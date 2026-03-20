@@ -29,12 +29,23 @@
     },
     "issueType": {
       "type": "string",
-      "enum": ["github", "linear", "freeform"],
+      "enum": ["github", "linear", "freeform", "ideation"],
       "description": "How the task was created"
+    },
+    "contractPath": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Path to ideation contract.md (only for issueType: ideation)"
     },
     "branch": {
       "type": "string",
       "description": "Git branch name (e.g. fix/issue-53, fix/DX-1234)"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["attended", "unattended"],
+      "default": "attended",
+      "description": "Pipeline execution mode. Attended = human monitors and can intervene. Unattended = autonomous with auto-abort on failure."
     },
     "agents": {
       "type": "object",
@@ -67,6 +78,26 @@
       "type": ["integer", "null"],
       "default": null,
       "description": "Pull request number"
+    },
+    "fastTestCommand": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Fast test command targeting only changed files (e.g. 'pnpm vitest --related'). Run first during keep/discard; full suite only if this passes. If null, falls back to full test command from projects.json."
+    },
+    "checkCommand": {
+      "type": ["string", "null"],
+      "default": null,
+      "description": "Shell command that outputs a single number measuring progress. Implementer runs after each attempt to decide keep/discard."
+    },
+    "checkBaseline": {
+      "type": ["number", "null"],
+      "default": null,
+      "description": "Value of checkCommand before implementation starts. Captured by implementer at setup."
+    },
+    "checkTarget": {
+      "type": ["number", "null"],
+      "default": null,
+      "description": "Target value for checkCommand. Task succeeds when checkCommand output >= checkTarget."
     }
   },
   "additionalProperties": false,

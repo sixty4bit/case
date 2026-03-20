@@ -1,7 +1,7 @@
 ---
 name: case
 description: WorkOS OSS harness — cross-repo orchestration, conventions, playbooks, and task dispatch. Use when working across WorkOS open source repos or when you need harness context.
-argument-hint: "[issue-number] or [LINEAR-ID]"
+argument-hint: '[issue-number] or [LINEAR-ID]'
 ---
 
 # Case — WorkOS OSS Harness
@@ -9,30 +9,24 @@ argument-hint: "[issue-number] or [LINEAR-ID]"
 You are operating within the Case harness for WorkOS open source projects.
 Humans steer. Agents execute. When agents struggle, fix the harness.
 
-**Case repo**: Resolve dynamically at the start of each `/case` invocation. This SKILL.md file lives at `skills/case/SKILL.md` within the case repo. Strip that suffix from this file's absolute path to get `CASE_REPO`. All `${CASE_REPO}` references below use this resolved path.
+**Case repo**: `/Users/nicknisi/Developer/case`
 
-Before running any scripts, resolve and verify the case repo path:
-```bash
-# CASE_REPO is the root of the case harness repo (parent of skills/, agents/, scripts/)
-# Derive it from this skill file's location: strip skills/case/ from the path
-CASE_REPO="<resolved-path>"  # Replace with actual path derived from this SKILL.md's location
-ls "${CASE_REPO}/AGENTS.md" "${CASE_REPO}/projects.json" > /dev/null
-```
+All paths below are relative to the skill's cache directory. For scripts, tasks, and project manifest, use the case repo path above.
 
 ## Agent Architecture
 
 Case uses a **six-agent pipeline** to prevent context pollution and enable self-improvement. Each agent has a focused context window and a single responsibility:
 
-| Agent | Responsibility | Tools |
-|---|---|---|
-| **Orchestrator** (you) | Parse issue, create task, baseline smoke test, spawn subagents | AskUserQuestion, Agent, Read, Bash |
-| **Implementer** | Write code, run unit tests, commit (with WIP checkpoints), read repo learnings | Read, Edit, Write, Bash, Glob, Grep |
-| **Verifier** | Manual testing with Playwright, evidence markers, screenshots | Read, Bash, Glob, Grep |
-| **Reviewer** | Review diff against golden principles, classify findings, gate PR creation | Read, Bash, Glob, Grep |
-| **Closer** | Create PR with thorough description, satisfy hook gates, post review comments | Read, Bash, Glob, Grep |
-| **Retrospective** | Apply harness improvements directly, maintain per-repo learnings | Read, Edit, Write, Bash, Glob, Grep |
+| Agent                  | Responsibility                                                                 | Tools                               |
+| ---------------------- | ------------------------------------------------------------------------------ | ----------------------------------- |
+| **Orchestrator** (you) | Parse issue, create task, baseline smoke test, spawn subagents                 | ask_user_question, Agent, Read, Bash  |
+| **Implementer**        | Write code, run unit tests, commit (with WIP checkpoints), read repo learnings | Read, Edit, Write, Bash, Glob, Grep |
+| **Verifier**           | Manual testing with Playwright, evidence markers, screenshots                  | Read, Bash, Glob, Grep              |
+| **Reviewer**           | Review diff against golden principles, classify findings, gate PR creation     | Read, Bash, Glob, Grep              |
+| **Closer**             | Create PR with thorough description, verify evidence gates, post review comments  | Read, Bash, Glob, Grep              |
+| **Retrospective**      | Propose harness improvements, apply per-repo learnings directly                | Read, Edit, Write, Bash, Glob, Grep |
 
-Agent prompt files: `${CASE_REPO}/agents/{implementer,verifier,reviewer,closer,retrospective}.md`
+Agent prompt files: `/Users/nicknisi/Developer/case/agents/{implementer,verifier,reviewer,closer,retrospective}.md`
 
 The orchestrator spawns each agent sequentially using the `Agent` tool, passing the agent prompt file content as the prompt. Each agent ends its response with a structured `AGENT_RESULT` block (see below).
 
@@ -66,24 +60,28 @@ AGENT_RESULT>>>
 Parse the arguments passed to `/case`. The argument determines the workflow:
 
 **No argument** — `/case`
-1. Check if `.case-active` exists with a task ID → if so, resume that task (see Re-entry Semantics below)
+
+1. Check if `.case/active` exists with a task ID → if so, resume that task (see Re-entry Semantics below)
 2. Otherwise, load harness context for the current task. Follow the Task Routing table below.
 
 **GitHub issue number** — `/case 34`
+
 1. Detect the current repo from the working directory (`git remote get-url origin`)
 2. Fetch the issue: `gh issue view 34 --json title,body,labels,comments`
 3. Read the issue title, body, and comments to understand the task
 4. Run the **Orchestrator Flow** below (steps 0-7)
 
 **Linear issue ID** — `/case DX-1234`
+
 1. Try the Linear MCP tools first (available via claude.ai integration):
    - Use `mcp__claude_ai_Linear__get_issue` with the issue ID
    - Read title, description, comments, status, and assignee
-2. If Linear MCP tools are not available, ask the user to paste the issue details using `AskUserQuestion`
+2. If Linear MCP tools are not available, ask the user to paste the issue details using `ask_user_question`
 3. Determine the target repo from the issue content or current working directory
 4. Run the **Orchestrator Flow** below (steps 0-7)
 
 **How to detect argument type:**
+
 - Matches `/^\d+$/` → GitHub issue number (e.g., `34`, `142`)
 - Matches `/^[A-Z]+-\d+$/` → Linear issue ID (e.g., `DX-1234`, `AUTH-42`)
 - Anything else → treat as a free-form task description, use Task Routing
@@ -94,30 +92,33 @@ After parsing and fetching the issue, execute this pipeline:
 
 ### Step 0: Check for Existing Task (Re-entry)
 
-**Explicit arguments always win over `.case-active`.** The `.case-active` shortcut is only used for no-arg `/case`. When an explicit issue number or Linear ID is provided, re-entry is matched by issue content, not by `.case-active`.
+**Explicit arguments always win over `.case/active`.** The `.case/active` shortcut is only used for no-arg `/case`. When an explicit issue number or Linear ID is provided, re-entry is matched by issue content, not by `.case/active`.
 
 1. **If an explicit argument was provided** (issue number or Linear ID):
-   - Scan `${CASE_REPO}/tasks/active/*.task.json` for a match:
+   - Scan `/Users/nicknisi/Developer/case/tasks/active/*.task.json` for a match:
      - GitHub issue → matching `repo` + `issueType: "github"` + `issue` number
      - Linear ID → matching `issueType: "linear"` + `issue` ID
-   - Ignore `.case-active` — it may be stale or from a different issue
+   - Ignore `.case/active` — it may be stale or from a different issue
    - If found and matches the argument → resume (see status table below)
    - If not found → proceed to step 1 (new task)
 
 2. **If no argument** (`/case` with no args):
-   - Read `.case-active` — if it contains a task ID, look up `${CASE_REPO}/tasks/active/{task-id}.task.json` directly
-   - If found → resume
+   - Read `.case/active` — if it contains a task ID, look up `/Users/nicknisi/Developer/case/tasks/active/{task-id}.task.json` directly
+   - If found → check `issueType`:
+     - **If `"ideation"`**: Do NOT resume here. Report to user: "This task was created by `/case:from-ideation`. Resume with: `/case:from-ideation {contractPath}`" and stop.
+     - **Otherwise**: resume (see status table below)
    - If not found → load harness context (no orchestrator flow)
 
 3. **Free text argument**: no automatic re-entry. Proceed to step 1.
 
 **Resume status table** (when an existing task is found):
-   - `active` → go to step 3 (Branch & Baseline)
-   - `implementing` → step 4 (Implementer) if implementer failed, step 5 (Verifier) if implementer completed
-   - `verifying` → step 5 (Verifier) if verifier failed, step 6 (Reviewer) if verifier completed
-   - `reviewing` → step 6 (Reviewer) if reviewer failed/blocked, step 7 (Closer) if reviewer completed
-   - `closing` → step 7 (Closer)
-   - `pr-opened` → report "PR already exists" and done
+
+- `active` → go to step 3 (Branch & Baseline)
+- `implementing` → step 4 (Implementer) if implementer failed, step 5 (Verifier) if implementer completed
+- `verifying` → step 5 (Verifier) if verifier failed, step 6 (Reviewer) if verifier completed
+- `reviewing` → step 6 (Reviewer) if reviewer failed/blocked, step 7 (Closer) if reviewer completed
+- `closing` → step 7 (Closer)
+- `pr-opened` → report "PR already exists" and done
 
 If not found → proceed to step 1
 
@@ -128,9 +129,9 @@ _(Already done in the Arguments section above)_
 ### Step 2: Task Setup
 
 1. Derive repo name from `git remote get-url origin`
-2. Find next sequential task number: count existing `{repo}-*.md` files in `${CASE_REPO}/tasks/active/` + 1
-3. Create task file (`.md`) using the appropriate template from `${CASE_REPO}/tasks/templates/`
-4. Create companion `.task.json` in `${CASE_REPO}/tasks/active/`:
+2. Find next sequential task number: count existing `{repo}-*.md` files in `/Users/nicknisi/Developer/case/tasks/active/` + 1
+3. Create task file (`.md`) using the appropriate template from `/Users/nicknisi/Developer/case/tasks/templates/`
+4. Create companion `.task.json` in `/Users/nicknisi/Developer/case/tasks/active/`:
    ```json
    {
      "id": "<repo>-<n>-issue-<number>",
@@ -154,7 +155,7 @@ _(Already done in the Arguments section above)_
    ```
 5. Activate case enforcement — write the task ID (not bare touch):
    ```bash
-   echo "<task-id>" > .case-active
+   mkdir -p .case && echo "<task-id>" > .case/active
    ```
 
 ### Step 3: Branch & Baseline
@@ -168,42 +169,110 @@ _(Already done in the Arguments section above)_
    - Exists → `git checkout <branch>` (resume)
    - Not exists → `git checkout -b <branch>` (create)
 3. Run baseline smoke test:
+
    ```bash
-   bash ${CASE_REPO}/scripts/bootstrap.sh <repo-name>
+   bash /Users/nicknisi/Developer/case/scripts/bootstrap.sh <repo-name>
    ```
-   - If FAIL: Report broken baseline to user via `AskUserQuestion`. Do not spawn implementer. **Go to step 9 (Retrospective)** with outcome "failed" and failed agent "orchestrator/baseline".
+
+   - If FAIL: Report broken baseline to user via `ask_user_question`. Do not spawn implementer. **Go to step 9 (Retrospective)** with outcome "failed" and failed agent "orchestrator/baseline".
    - If PASS: continue
+
 4. Append to task file progress log:
+
    ```markdown
    ### Orchestrator — <timestamp>
+
    - Created task from <issue-type> <issue-ref>
    - Baseline smoke test: PASS
    - Spawning implementer
    ```
+
 5. Update task JSON:
    ```bash
-   bash ${CASE_REPO}/scripts/task-status.sh <task.json> agent orchestrator status completed
-   bash ${CASE_REPO}/scripts/task-status.sh <task.json> agent orchestrator completed now
+   bash /Users/nicknisi/Developer/case/scripts/task-status.sh <task.json> agent orchestrator status completed
+   bash /Users/nicknisi/Developer/case/scripts/task-status.sh <task.json> agent orchestrator completed now
    ```
+
+### Step 3b. Dispatch to Orchestrator
+
+Run the TypeScript orchestrator for the remainder of the pipeline (Steps 4-9):
+
+```bash
+bun /Users/nicknisi/Developer/case/src/index.ts --task <task.json path> --mode attended
+```
+
+The orchestrator handles Steps 4-9 deterministically via a while/switch loop. If it exits with code 0, the pipeline is complete. If it exits with code 1, check the task JSON and run log for failure details.
+
+**When to use this vs the manual steps below:**
+
+- **Prefer the orchestrator** — it provides deterministic flow control, hard-capped retries, and role-specific context assembly.
+- **Fall back to manual steps** — if the orchestrator is unavailable or you need fine-grained control (e.g., debugging a specific phase).
+
+The manual Steps 4-9 below remain as documentation and fallback.
+
+---
 
 ### Step 4: Spawn Implementer
 
-1. Read `${CASE_REPO}/agents/implementer.md`
+1. Read `/Users/nicknisi/Developer/case/agents/implementer.md`
 2. Use the `Agent` tool:
    - **prompt**: `<implementer.md content>` + task context:
      - Task file path (`.md` and `.task.json`)
+     - Working memory path (`{task-stem}.working.md` — may not exist on first run)
      - Target repo path
      - Issue summary (title, body, key details)
      - Playbook path from Task Routing
    - **subagent_type**: `general-purpose`
 3. Wait for completion
 4. Parse `AGENT_RESULT` from response
-5. If `status == "failed"`: report error to user via `AskUserQuestion`. **Go to step 9 (Retrospective)** with outcome "failed" and failed agent "implementer".
+5. If `status == "failed"`: **attempt intelligent respawn** (step 4b) before surfacing to user.
 6. If `status == "completed"`: continue to step 5
+
+### Step 4b: Intelligent Respawn (on implementer failure)
+
+One targeted retry is worth more than three identical retries. Analyze the failure and retry once with adjusted context before surfacing to the user.
+
+1. Run failure analysis:
+   ```bash
+   ANALYSIS=$(bash /Users/nicknisi/Developer/case/scripts/analyze-failure.sh <task.json> implementer "<error from AGENT_RESULT>")
+   echo "$ANALYSIS"
+   ```
+2. Parse the JSON output. Check `retryViable`:
+   - If `false` → skip retry, go to step 4c (surface to user)
+   - If `true` → continue with retry
+3. Respawn the implementer with adjusted context. Prepend this to the original prompt:
+
+   ```
+   ## RETRY CONTEXT — Previous attempt failed
+
+   **Failure class:** {failureClass}
+   **Error:** {errorSummary}
+   **What was already tried:** {whatWasTried — list items}
+   **Suggested focus:** {suggestedFocus}
+
+   Do NOT repeat the previous approach. Read your working memory ({task-stem}.working.md)
+   for details on what was tried. Focus on the suggested approach above.
+   ```
+
+   Use the `Agent` tool with the adjusted prompt. Same subagent_type.
+
+4. Parse the retry's `AGENT_RESULT`:
+   - If `status == "completed"` → continue to step 5 (Verifier)
+   - If `status == "failed"` → go to step 4c (surface to user)
+
+**Rule: maximum 1 intelligent retry per pipeline run.** Do not retry again after the retry fails.
+
+### Step 4c: Surface Implementer Failure to User
+
+Report the failure to user via `ask_user_question`:
+
+- Include both the original error and the retry result (if retry was attempted)
+- Options: "Re-run with guidance" | "Abort"
+- If "Abort": **go to step 9 (Retrospective)** with outcome "failed" and failed agent "implementer".
 
 ### Step 5: Spawn Verifier
 
-1. Read `${CASE_REPO}/agents/verifier.md`
+1. Read `/Users/nicknisi/Developer/case/agents/verifier.md`
 2. Use the `Agent` tool:
    - **prompt**: `<verifier.md content>` + task context (file path, repo path)
    - **subagent_type**: `general-purpose`
@@ -211,19 +280,19 @@ _(Already done in the Arguments section above)_
 4. Parse `AGENT_RESULT` from response
 5. If `status == "failed"`:
    - Check if `src/` files changed: `git diff --name-only main | grep "^src/"`
-   - **If src/ changed** (verification mandatory — hook will block):
-     Use `AskUserQuestion`: "Verification failed: `<summary>`"
+   - **If src/ changed** (verification mandatory — closer must verify):
+     Use `ask_user_question`: "Verification failed: `<summary>`"
      Options: "Fix and re-verify" | "Abort"
      If "Abort": **go to step 9 (Retrospective)** with outcome "failed" and failed agent "verifier".
    - **If NO src/ changed** (verification optional):
-     Use `AskUserQuestion`: "Verification failed: `<summary>`"
+     Use `ask_user_question`: "Verification failed: `<summary>`"
      Options: "Fix and re-verify" | "Skip verification" | "Abort"
      If "Abort": **go to step 9 (Retrospective)** with outcome "failed" and failed agent "verifier".
 6. If `status == "completed"`: continue to step 6
 
 ### Step 6: Spawn Reviewer
 
-1. Read `${CASE_REPO}/agents/reviewer.md`
+1. Read `/Users/nicknisi/Developer/case/agents/reviewer.md`
 2. Use the `Agent` tool:
    - **prompt**: `<reviewer.md content>` + task context:
      - Task file path (`.md` and `.task.json`)
@@ -232,11 +301,11 @@ _(Already done in the Arguments section above)_
 3. Wait for completion
 4. Parse `AGENT_RESULT` from response
 5. If `status == "blocked"` (critical findings):
-   - Report critical findings to user via `AskUserQuestion`:
+   - Report critical findings to user via `ask_user_question`:
      "Reviewer found `<N>` critical finding(s): `<details>`"
      Options: "Re-implement and re-review" | "Override and continue" | "Abort"
      If "Re-implement and re-review": **go to step 4 (Implementer)** to address the findings, then re-run verifier and reviewer.
-     If "Override and continue": continue to step 7 (Closer). Note: the pre-PR hook will still require `.case-reviewed` — the user must manually create the marker or address the findings.
+     If "Override and continue": continue to step 7 (Closer). Note: the closer still requires `.case/<task-slug>/reviewed` — the user must manually create the marker or address the findings.
      If "Abort": **go to step 9 (Retrospective)** with outcome "failed" and failed agent "reviewer".
 6. If `status == "completed"` (no critical findings): continue to step 7
 
@@ -244,9 +313,9 @@ _(Already done in the Arguments section above)_
 
 1. Update task JSON status to `closing`:
    ```bash
-   bash ${CASE_REPO}/scripts/task-status.sh <task.json> status closing
+   bash /Users/nicknisi/Developer/case/scripts/task-status.sh <task.json> status closing
    ```
-2. Read `${CASE_REPO}/agents/closer.md`
+2. Read `/Users/nicknisi/Developer/case/agents/closer.md`
 3. Use the `Agent` tool:
    - **prompt**: `<closer.md content>` + task context (file path, repo path, verifier `AGENT_RESULT`, reviewer `AGENT_RESULT`)
    - **subagent_type**: `general-purpose`
@@ -257,60 +326,60 @@ _(Already done in the Arguments section above)_
 
 ### Step 8: Complete
 
-Report to user:
-- PR URL from closer's `AGENT_RESULT`
-- Summary: what was done (from implementer), what was tested (from verifier), what was reviewed (from reviewer), PR link (from closer)
+1. Report to user:
+   - PR URL from closer's `AGENT_RESULT`
+   - Summary: what was done (from implementer), what was tested (from verifier), what was reviewed (from reviewer), PR link (from closer)
 
 ### Step 9: Spawn Retrospective
 
 **Always runs** — after both successful and failed pipelines, at every failure class (baseline, implementer, verifier, reviewer, closer). Every failure branch in steps 3-8 routes here explicitly. This is how the harness improves itself.
 
-1. Read `${CASE_REPO}/agents/retrospective.md`
-2. Use the `Agent` tool:
+1. Read `/Users/nicknisi/Developer/case/agents/retrospective.md`
+3. Use the `Agent` tool:
    - **prompt**: `<retrospective.md content>` + context:
      - Task file path (with progress log from all agents)
      - Task JSON path (with agent phases and timing)
      - Pipeline outcome: "completed" or "failed"
      - If failed: which agent failed and its AGENT_RESULT error
    - **subagent_type**: `general-purpose`
-   - **run_in_background**: `true` (retrospective runs async, doesn't block the pipeline)
-3. The retrospective agent **auto-applies** improvements directly to case/ files (docs, scripts, agents, hooks). High and medium priority fixes are applied immediately; low priority fixes are applied if straightforward.
-4. When the background agent completes, report to the user:
+4. The retrospective agent **proposes amendments** to `docs/proposed-amendments/` for human review. Only repo learnings (`docs/learnings/`) are applied directly.
+5. When the agent completes, report to the user:
    ```
-   "Retrospective applied <N> harness improvement(s): <summary of changes>"
+   "Retrospective proposed <N> amendment(s): <summary>"
    ```
-   Include the list of files changed from the AGENT_RESULT artifacts.
+   Include the list of proposed amendment files from the AGENT_RESULT artifacts.
 
-**The retrospective never blocks the pipeline.** It runs in the background after the PR is created. If it fails or produces no improvements, the `/case` run is still complete.
+**The retrospective is awaited.** It runs after the PR is created and completes before the pipeline exits. If it fails or produces no proposals, the `/case` run is still complete.
 
 ## Re-entry Semantics
 
 If `/case` is invoked and a `.task.json` already exists for the issue, the orchestrator resumes from the last completed agent phase instead of recreating everything. This handles crashed or interrupted runs.
 
-**Explicit arguments win.** When `/case 53` or `/case DX-1234` is invoked, re-entry is matched by scanning `.task.json` files for the specific issue — `.case-active` is ignored (it may be stale or from a different issue).
+**Explicit arguments win.** When `/case 53` or `/case DX-1234` is invoked, re-entry is matched by scanning `.task.json` files for the specific issue — `.case/active` is ignored (it may be stale or from a different issue).
 
-**No-arg `/case`** uses `.case-active` as a convenience shortcut to resume the most recent task.
+**No-arg `/case`** uses `.case/active` as a convenience shortcut to resume the most recent task.
 
-**Free-form tasks**: No automatic re-entry (ambiguous). User can resume by running `/case` with no arguments from the same branch — the `.case-active` marker routes them.
+**Free-form tasks**: No automatic re-entry (ambiguous). User can resume by running `/case` with no arguments from the same branch — the `.case/active` marker routes them.
 
 ## Baseline Smoke Test
 
 Before spawning the implementer, the orchestrator runs the target repo's test/build suite to confirm a clean baseline. This prevents agents from building on broken foundations.
 
 ```bash
-bash ${CASE_REPO}/scripts/bootstrap.sh <repo-name>
+bash /Users/nicknisi/Developer/case/scripts/bootstrap.sh <repo-name>
 ```
 
 The bootstrap script runs the repo's `setup`, `build`, `test`, `typecheck`, and `lint` commands (from `projects.json`). If any fail:
+
 - **Stop the orchestrator.** Do not spawn the implementer.
-- Report the failure to the user via `AskUserQuestion`
+- Report the failure to the user via `ask_user_question`
 - Suggest fixing the baseline before retrying `/case`
 
 This is embedded in Step 3 of the Orchestrator Flow but documented here for clarity.
 
 ## Rules
 
-- **Always use `AskUserQuestion` tool when asking the user questions.** Do not ask questions in plain text. The tool provides structured options and ensures the user can respond clearly.
+- **Always use `ask_user_question` tool when asking the user questions.** Do not ask questions in plain text. The tool provides structured options and ensures the user can respond clearly.
 - **Always work in feature branches.** Never commit directly to main. Use `claude --worktree` or create a branch before starting work.
 - **Always use conventional commits.** Format: `type(scope): description`. Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`. Use `!` for breaking changes (e.g., `feat!:`). See `../../docs/conventions/commits.md` for details.
 - **Always open pull requests.** Never push directly to main. Use `gh pr create` to open a PR for review. The `gh` CLI is available and authenticated.
@@ -320,6 +389,7 @@ This is embedded in Step 3 of the Orchestrator Flow but documented here for clar
 ## Always Load
 
 Read these first for landscape and rules:
+
 - `../../AGENTS.md` — project landscape, navigation, task dispatch overview
 - `../../docs/golden-principles.md` — invariants to follow across all repos
 
@@ -327,41 +397,44 @@ Read these first for landscape and rules:
 
 Based on the user's request, load the relevant context:
 
-| If the task involves... | Read... |
-| --- | --- |
-| The WorkOS CLI | `../../docs/architecture/cli.md` and `../../docs/playbooks/add-cli-command.md` |
-| New AuthKit framework integration | `../../docs/architecture/authkit-framework.md` and `../../docs/playbooks/add-authkit-framework.md` |
-| Session management (authkit-session) | `../../docs/architecture/authkit-session.md` |
-| Skills plugin | `../../docs/architecture/skills-plugin.md` |
-| Bug fix in any repo | `../../docs/playbooks/fix-bug.md` |
-| Feature request in any repo | `../../docs/playbooks/add-feature.md` |
-| Cross-repo change | `../../docs/playbooks/cross-repo-update.md` |
-| Commit conventions | `../../docs/conventions/commits.md` |
-| Testing standards | `../../docs/conventions/testing.md` |
-| PR structure / review | `../../docs/conventions/pull-requests.md` |
-| Code style / formatting | `../../docs/conventions/code-style.md` |
+| If the task involves...              | Read...                                                                                            |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| The WorkOS CLI                       | `../../docs/architecture/cli.md` and `../../docs/playbooks/add-cli-command.md`                     |
+| New AuthKit framework integration    | `../../docs/architecture/authkit-framework.md` and `../../docs/playbooks/add-authkit-framework.md` |
+| Session management (authkit-session) | `../../docs/architecture/authkit-session.md`                                                       |
+| Skills plugin                        | `../../docs/architecture/skills-plugin.md`                                                         |
+| Bug fix in any repo                  | `../../docs/playbooks/fix-bug.md`                                                                  |
+| Feature request in any repo          | `../../docs/playbooks/add-feature.md`                                                              |
+| Cross-repo change                    | `../../docs/playbooks/cross-repo-update.md`                                                        |
+| Ideation contract                    | Use `/case:from-ideation <folder>` instead — separate skill for ideation-sourced work              |
+| Commit conventions                   | `../../docs/conventions/commits.md`                                                                |
+| Testing standards                    | `../../docs/conventions/testing.md`                                                                |
+| PR structure / review                | `../../docs/conventions/pull-requests.md`                                                          |
+| Code style / formatting              | `../../docs/conventions/code-style.md`                                                             |
 
 ## Project Manifest
 
-Full repo metadata (paths, commands, remotes): `${CASE_REPO}/projects.json`
+Full repo metadata (paths, commands, remotes): `/Users/nicknisi/Developer/case/projects.json`
 
 ## Task Dispatch
 
 To create a task for async agent execution:
 
-1. Choose template from `${CASE_REPO}/tasks/templates/`
+1. Choose template from `/Users/nicknisi/Developer/case/tasks/templates/`
 2. Fill in `{placeholder}` fields
-3. Save `.md` to `${CASE_REPO}/tasks/active/{repo}-{n}-{slug}.md`
-4. Create companion `.task.json` with the same stem (see task schema: `${CASE_REPO}/tasks/task.schema.json`)
-5. Update task JSON status as agents complete work via `${CASE_REPO}/scripts/task-status.sh`
+3. Save `.md` to `/Users/nicknisi/Developer/case/tasks/active/{repo}-{n}-{slug}.md`
+4. Create companion `.task.json` with the same stem (see task schema: `/Users/nicknisi/Developer/case/tasks/task.schema.json`)
+5. Update task JSON status as agents complete work via `/Users/nicknisi/Developer/case/scripts/task-status.sh`
 
 Available templates:
-- `${CASE_REPO}/tasks/templates/cli-command.md` — add a CLI command
-- `${CASE_REPO}/tasks/templates/authkit-framework.md` — new AuthKit framework integration
-- `${CASE_REPO}/tasks/templates/bug-fix.md` — fix a bug in any repo
-- `${CASE_REPO}/tasks/templates/cross-repo-update.md` — coordinated cross-repo change
 
-Format spec: `${CASE_REPO}/tasks/README.md`
+- `/Users/nicknisi/Developer/case/tasks/templates/cli-command.md` — add a CLI command
+- `/Users/nicknisi/Developer/case/tasks/templates/authkit-framework.md` — new AuthKit framework integration
+- `/Users/nicknisi/Developer/case/tasks/templates/bug-fix.md` — fix a bug in any repo
+- `/Users/nicknisi/Developer/case/tasks/templates/cross-repo-update.md` — coordinated cross-repo change
+- `/Users/nicknisi/Developer/case/tasks/templates/ideation-project.md` — implement an ideation contract (used by `/case:from-ideation`)
+
+Format spec: `/Users/nicknisi/Developer/case/tasks/README.md`
 
 ## Working in a Target Repo
 
@@ -369,9 +442,9 @@ Before making changes in any target repo:
 
 1. Create a feature branch (or use `claude --worktree` for isolated work)
 2. Read that repo's `CLAUDE.md` or `CLAUDE.local.md` for project-specific instructions
-3. Run `${CASE_REPO}/scripts/bootstrap.sh {repo-name}` to verify readiness
+3. Run `/Users/nicknisi/Developer/case/scripts/bootstrap.sh {repo-name}` to verify readiness
 4. Follow the repo's PR checklist before opening a PR
-5. Run `${CASE_REPO}/scripts/check.sh --repo {repo-name}` to verify conventions
+5. Run `/Users/nicknisi/Developer/case/scripts/check.sh --repo {repo-name}` to verify conventions
 
 ## Verification Tools
 
@@ -390,6 +463,7 @@ Skill: playwright-cli
 The skill provides `playwright-cli` commands: `open`, `goto`, `click`, `type`, `screenshot`, `snapshot`, and more. Use `Bash(playwright-cli:*)` for all browser interactions.
 
 Quick reference:
+
 ```bash
 playwright-cli open                          # open browser
 playwright-cli video-start                   # start recording (before navigating)
@@ -406,6 +480,7 @@ playwright-cli video-stop /tmp/verify.webm   # stop recording and save video
 Credentials for testing sign-in flows are at `~/.config/case/credentials`. Read this file to get test values.
 
 Expected keys:
+
 ```
 WORKOS_API_KEY=sk_test_...
 WORKOS_CLIENT_ID=client_...
@@ -415,6 +490,7 @@ WORKOS_COOKIE_PASSWORD=... (32+ chars for session encryption)
 ```
 
 Use these when testing auth flows with Playwright:
+
 1. Start the example app (e.g., `cd ../authkit-nextjs/examples/... && pnpm dev`)
 2. Navigate to the sign-in page
 3. Fill in test credentials from `~/.config/case/credentials`
@@ -444,8 +520,8 @@ cp .playwright-cli/page-*.png /tmp/after.png
 
 # Upload and get markdown
 # For video: the script auto-converts to GIF (inline) + mp4 (download link)
-VIDEO=$(${CASE_REPO}/scripts/upload-screenshot.sh /tmp/verification.webm)
-SCREENSHOT=$(${CASE_REPO}/scripts/upload-screenshot.sh /tmp/after.png)
+VIDEO=$(/Users/nicknisi/Developer/case/scripts/upload-screenshot.sh /tmp/verification.webm)
+SCREENSHOT=$(/Users/nicknisi/Developer/case/scripts/upload-screenshot.sh /tmp/after.png)
 
 # Use in PR body — VIDEO contains both GIF embed and mp4 download link
 echo "## Verification"
@@ -470,9 +546,11 @@ Use when Playwright isn't sufficient — e.g., inspecting live state, debugging 
 ### Example apps
 
 Some repos include example apps for end-to-end testing:
+
 - `../authkit-nextjs/examples/` — Next.js app wired to AuthKit
 
 ### When to use which
+
 - Unit tests → always, for logic verification
 - **Playwright → front-end changes, auth flows, redirects, cookie behavior, visual verification (preferred)**
 - Chrome DevTools MCP → interactive debugging only, when Playwright can't answer the question
@@ -480,7 +558,7 @@ Some repos include example apps for end-to-end testing:
 
 ## STOP — Closer Agent Checklist (mandatory)
 
-**The closer agent MUST verify every applicable item below BEFORE running `gh pr create`. The pre-PR hook enforces this mechanically.**
+**The closer agent MUST verify every applicable item below BEFORE running `gh pr create`. The pre-PR the closer verifies this before PR creation.**
 
 The orchestrator spawns the closer, which handles this checklist. If you're the orchestrator, do NOT execute these items yourself — the closer agent does.
 
@@ -488,23 +566,23 @@ The orchestrator spawns the closer, which handles this checklist. If you're the 
 - [ ] **Types check** — implementer ran typecheck
 - [ ] **Lint passes** — implementer ran lint
 - [ ] **Build succeeds** — implementer ran build
-- [ ] **Test evidence exists**: `.case-tested` with `output_hash` (created by implementer via `mark-tested.sh`)
-- [ ] **Manual testing done** (if src/ files changed): `.case-manual-tested` with `evidence` (created by verifier via `mark-manual-tested.sh`)
+- [ ] **Test evidence exists**: `.case/<task-slug>/tested` with `output_hash` (created by implementer via `mark-tested.sh`)
+- [ ] **Manual testing done** (if src/ files changed): `.case/<task-slug>/manual-tested` with `evidence` (created by verifier via `mark-manual-tested.sh`)
 - [ ] **Screenshots captured and uploaded** (if front-end changes): verifier captured via Playwright and uploaded via `upload-screenshot.sh`
-- [ ] **Code review passed**: `.case-reviewed` with `critical: 0` (created by reviewer via `mark-reviewed.sh`)
+- [ ] **Code review passed**: `.case/<task-slug>/reviewed` with `critical: 0` (created by reviewer via `mark-reviewed.sh`)
 - [ ] **Security audit** — if the change touches authentication, session management, token handling, cookie logic, middleware, or any code that enforces access control: load the `security-auditor` skill via the Skill tool and run it against the changed files. Address any critical or high findings before proceeding. Skip for changes that don't touch auth/security boundaries.
 - [ ] **Task file progress log updated** — all agents appended their entries
 - [ ] **Conventional commit** — implementer used `type(scope): description`
 - [ ] **PR description drafted** — includes: summary, what was tested, verification notes, screenshots, issue link, follow-ups
 
-**The pre-PR hook will BLOCK `gh pr create` if markers are missing. The closer must verify these gates before attempting PR creation.**
+**The closer MUST verify all evidence markers exist before attempting `gh pr create`.**
 
 ## Improving the Harness
 
 When an agent struggles or produces poor output, the fix goes into case/, not the code:
 
-- Missing pattern? Add to `${CASE_REPO}/docs/architecture/`
-- Unclear convention? Update `${CASE_REPO}/docs/conventions/`
-- Recurring task? Add a playbook + template in `${CASE_REPO}/`
-- Agent violation? Add to `${CASE_REPO}/docs/golden-principles.md` and update `scripts/check.sh`
+- Missing pattern? Add to `/Users/nicknisi/Developer/case/docs/architecture/`
+- Unclear convention? Update `/Users/nicknisi/Developer/case/docs/conventions/`
+- Recurring task? Add a playbook + template in `/Users/nicknisi/Developer/case/`
+- Agent violation? Add to `/Users/nicknisi/Developer/case/docs/golden-principles.md` and update `scripts/check.sh`
 - Wrong approach? Update the relevant `CLAUDE.md` in the target repo

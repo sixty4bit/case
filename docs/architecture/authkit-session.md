@@ -32,6 +32,7 @@ AuthService<TRequest, TResponse>        ← orchestrator
 The main entry point. Coordinates core, operations, and storage.
 
 Key methods:
+
 - `withAuth(request)` -- validate session, auto-refresh if expired, return `AuthResult`
 - `handleCallback(request, response, { code, state })` -- process OAuth callback
 - `signOut(sessionId)` -- get logout URL + clear session
@@ -41,6 +42,7 @@ Key methods:
 ### AuthKitCore (`src/core/AuthKitCore.ts`)
 
 Pure business logic, no framework types:
+
 - `verifyToken(token)` -- JWT verification against WorkOS JWKS (cached)
 - `parseTokenClaims(token)` -- decode JWT claims with generics
 - `encryptSession(session)` / `decryptSession(encrypted)` -- iron-webcrypto
@@ -67,10 +69,15 @@ Defined in `src/core/session/types.ts`:
 ```typescript
 interface SessionStorage<TRequest, TResponse, TOptions = unknown> {
   getSession(request: TRequest): Promise<string | null>;
-  saveSession(response: TResponse | undefined, sessionData: string, options?: TOptions):
-    Promise<{ response?: TResponse; headers?: HeadersBag }>;
-  clearSession(response: TResponse | undefined, options?: TOptions):
-    Promise<{ response?: TResponse; headers?: HeadersBag }>;
+  saveSession(
+    response: TResponse | undefined,
+    sessionData: string,
+    options?: TOptions,
+  ): Promise<{ response?: TResponse; headers?: HeadersBag }>;
+  clearSession(
+    response: TResponse | undefined,
+    options?: TOptions,
+  ): Promise<{ response?: TResponse; headers?: HeadersBag }>;
 }
 ```
 
@@ -126,6 +133,7 @@ Abstract base class implementing common cookie logic. Framework adapters extend 
 Dual config: programmatic via `configure({...})` + environment variables (env wins).
 
 Required:
+
 - `clientId` / `WORKOS_CLIENT_ID`
 - `apiKey` / `WORKOS_API_KEY`
 - `redirectUri` / `WORKOS_REDIRECT_URI`
@@ -148,16 +156,16 @@ All auth failures gracefully degrade to `{ user: null }` rather than throwing.
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `src/index.ts` | Public API exports |
-| `src/service/AuthService.ts` | Main service, orchestrates all layers |
-| `src/service/factory.ts` | Lazy-init factory with proxy |
-| `src/core/AuthKitCore.ts` | Pure business logic (JWT, crypto, refresh) |
-| `src/operations/AuthOperations.ts` | WorkOS API operations |
-| `src/core/session/types.ts` | `SessionStorage`, `Session`, `AuthResult` types |
-| `src/core/session/CookieSessionStorage.ts` | Abstract cookie storage base |
-| `src/core/session/TokenManager.ts` | JWT verification + claims parsing |
-| `src/core/encryption/ironWebcryptoEncryption.ts` | Session encryption |
-| `src/core/config/ConfigurationProvider.ts` | Env + programmatic config |
-| `src/core/errors.ts` | Error class hierarchy |
+| File                                             | Purpose                                         |
+| ------------------------------------------------ | ----------------------------------------------- |
+| `src/index.ts`                                   | Public API exports                              |
+| `src/service/AuthService.ts`                     | Main service, orchestrates all layers           |
+| `src/service/factory.ts`                         | Lazy-init factory with proxy                    |
+| `src/core/AuthKitCore.ts`                        | Pure business logic (JWT, crypto, refresh)      |
+| `src/operations/AuthOperations.ts`               | WorkOS API operations                           |
+| `src/core/session/types.ts`                      | `SessionStorage`, `Session`, `AuthResult` types |
+| `src/core/session/CookieSessionStorage.ts`       | Abstract cookie storage base                    |
+| `src/core/session/TokenManager.ts`               | JWT verification + claims parsing               |
+| `src/core/encryption/ironWebcryptoEncryption.ts` | Session encryption                              |
+| `src/core/config/ConfigurationProvider.ts`       | Env + programmatic config                       |
+| `src/core/errors.ts`                             | Error class hierarchy                           |

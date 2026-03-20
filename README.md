@@ -1,7 +1,6 @@
 # Case
 
-<img width="500" height="500" alt="Gemini_Generated_Image_osdc2vosdc2vosdc-removebg-preview" src="https://github.com/user-attachments/assets/d00ab668-d26b-41d2-905b-751d3c0ff236" />
-
+<img width="500" height="500" alt="Untitled_design__2_-removebg-preview" src="https://github.com/user-attachments/assets/3fc18864-10f2-4d07-9ae9-13ad590f7a8f" />
 
 A harness for orchestrating AI agent work across WorkOS open source projects.
 
@@ -21,141 +20,198 @@ graph TD
 
     D --> G["Create task file + .task.json"]
     E --> G
-    G --> H["echo task-id > .case-active"]
+    G --> H["mkdir -p .case && echo task-id > .case/active"]
     H --> I["Baseline smoke test"]
     I -->|FAIL| RETRO["Retrospective"]
-    I -->|PASS| J["Spawn Implementer"]
+    I -->|PASS| ORCH["Programmatic Orchestrator"]
 
-    J --> K{"Implementer result"}
-    K -->|failed| RETRO
-    K -->|completed| L["Spawn Verifier"]
+    ORCH --> J["Implement"]
+    J --> K{"Result"}
+    K -->|failed + retryViable| J2["Retry with failure analysis"]
+    J2 -->|failed| RETRO
+    J2 -->|completed| L["Verify"]
+    K -->|completed| L
+    K -->|failed + !retryViable| RETRO
 
-    L --> M{"Verifier result"}
+    L --> M{"Result"}
     M -->|failed| RETRO
-    M -->|completed| N["Spawn Reviewer"]
+    M -->|completed| N["Review"]
 
-    N --> O{"Reviewer result"}
+    N --> O{"Result"}
     O -->|critical findings| RETRO
-    O -->|passed| P["Spawn Closer"]
+    O -->|passed| P["Close"]
 
-    P --> Q{"Closer result"}
+    P --> Q{"Result"}
     Q -->|failed| RETRO
     Q -->|completed| R["PR opened"]
 
     R --> RETRO
-    RETRO --> S["Apply harness improvements + update learnings"]
+    RETRO --> S["Propose amendments + update learnings"]
 ```
+
+Steps 0-3 (issue parsing, task creation, branch setup) are handled by the CLI orchestrator. Steps 4-9 (implement through retrospective) are handled by the **programmatic orchestrator** — a TypeScript `while`/`switch` loop that makes phase transitions deterministic rather than LLM-interpreted.
+
+All agents run as [Pi](https://shittycodingagent.ai/) sessions — the orchestrator as an interactive session with a TUI, sub-agents as batch sessions. Each agent role can use a different model/provider via `~/.config/case/config.json`.
 
 ### The Agents
 
-| Agent | Responsibility | Never does |
-|---|---|---|
-| **Orchestrator** | Parse issue, create task, smoke test, dispatch agents | Write code, run Playwright |
-| **Implementer** | Write fix, run unit tests, commit (with WIP checkpoints), read repo learnings | Start example apps, create PRs |
-| **Verifier** | Test the specific fix with Playwright, create evidence | Edit code, commit |
-| **Reviewer** | Review diff against golden principles, classify findings, gate PR creation | Edit code, commit, run tests |
-| **Closer** | Create PR with thorough description, satisfy hooks, post review comments | Edit code, run tests |
-| **Retrospective** | Analyze the run, apply harness improvements directly, maintain per-repo learnings | Edit target repo code |
+| Agent             | Responsibility                                                                   | Never does                     |
+| ----------------- | -------------------------------------------------------------------------------- | ------------------------------ |
+| **Orchestrator**  | Parse issue, create task, smoke test, dispatch agents                            | Write code, run Playwright     |
+| **Implementer**   | Write fix, run unit tests, commit (with WIP checkpoints), read repo learnings    | Start example apps, create PRs |
+| **Verifier**      | Test the specific fix with Playwright, create evidence                           | Edit code, commit              |
+| **Reviewer**      | Review diff against golden principles, classify findings, gate PR creation       | Edit code, commit, run tests   |
+| **Closer**        | Create PR with thorough description, satisfy hooks, post review comments         | Edit code, run tests           |
+| **Retrospective** | Analyze the run, propose harness improvements, apply per-repo learnings directly | Edit target repo code          |
+
+## Programmatic Orchestrator
+
+The pipeline's flow control (Steps 4-9) runs as a TypeScript program rather than LLM-interpreted prose. The LLM still does the work _inside_ each phase (writing code, testing, reviewing), but the transitions _between_ phases are deterministic `if/else` branches.
+
+| Concern                | Before (prose in SKILL.md)                             | After (TypeScript orchestrator)                       |
+| ---------------------- | ------------------------------------------------------ | ----------------------------------------------------- |
+| Phase transitions      | LLM reads a table and decides                          | `switch(currentPhase)` returns `nextPhase`            |
+| Retry cap              | Doom-loop hook fires after 3 identical failures        | `maxRetries: 1` checked before spawning               |
+| Resume after interrupt | LLM reads status table, hopefully picks the right step | `determineEntryPhase(task)` returns the correct phase |
+| Context per agent      | LLM decides what to include                            | `assemblePrompt()` gives each role only what it needs |
+| Attended vs unattended | Not supported                                          | `--mode unattended` auto-aborts on failure            |
+
+### Usage
+
+Three ways to run Case:
+
+```bash
+# 1. Interactive mode — conversational TUI with Pi, can discuss before executing
+ca --agent              # freeform planning / ideation session
+ca --agent 1234         # start working on GitHub issue #1234
+# In interactive mode, say "go" to quick-build, or "execute docs/ideation/foo/" for existing specs
+
+# 2. Batch mode — detect repo, fetch issue, run full pipeline
+ca 1234                 # GitHub issue
+ca DX-1234              # Linear issue
+ca                      # resume active task via .case/active marker
+
+# 3. Task mode — run pipeline for an existing task file
+ca --task tasks/active/cli-1-issue-53.task.json
+ca --task tasks/active/cli-1-issue-53.task.json --mode unattended
+ca --task tasks/active/cli-1-issue-53.task.json --dry-run
+```
+
+Override the model for all agents in a single run:
+
+```bash
+ca --model claude-opus-4-5 1234
+ca --model gemini-2.5-pro --agent 1234
+```
+
+The `/case` skill dispatches to the orchestrator automatically. You can also invoke `ca` directly.
+
+### Architecture
+
+```
+src/
+  index.ts                CLI entry point (run, create, serve, --agent)
+  pipeline.ts             Core while/switch loop (Steps 4-9)
+  notify.ts               Attended (readline) vs unattended (auto-abort) notifier
+  config.ts               Loads projects.json, resolves paths, builds PipelineConfig
+  types.ts                TaskJson, AgentResult, PipelineConfig, AgentModelConfig, etc.
+  agent/
+    pi-runner.ts          Spawn Pi batch sessions per agent role
+    orchestrator-session.ts  Interactive Pi session for --agent mode
+    config.ts             Per-agent model config (~/.config/case/config.json)
+    tool-sets.ts          Scoped Pi tools per agent role (read-only vs full write)
+    prompt-loader.ts      Load agent .md prompts, strip frontmatter
+    from-ideation.ts      Execute ideation contracts: load → phases → verify → review → close
+    tools/
+      pipeline-tool.ts    Pi tool: run the case pipeline from interactive session
+      from-ideation-tool.ts Pi tool: execute ideation contracts through the pipeline
+      issue-tool.ts       Pi tool: fetch issues from GitHub/Linear
+      task-tool.ts        Pi tool: create task files
+      baseline-tool.ts    Pi tool: run bootstrap.sh
+  entry/
+    cli-orchestrator.ts   Steps 0-3: detect repo, fetch issue, create task, baseline
+    issue-fetcher.ts      GitHub (gh CLI) and Linear (GraphQL) issue fetching
+    repo-detector.ts      Auto-detect target repo from cwd
+    task-factory.ts       Create .md + .task.json pairs
+    task-scanner.ts       Find existing tasks for re-entry
+  state/
+    task-store.ts         Reads JSON directly, writes through task-status.sh
+    transitions.ts        Deterministic re-entry from any task state
+  context/
+    prefetch.ts           Parallel repo context gathering (session, learnings, commits)
+    assembler.ts          Role-specific prompt assembly per agent
+  phases/
+    implement.ts          Spawn implementer + intelligent retry (max 1)
+    verify.ts             Spawn verifier (no retries — needs human judgment)
+    review.ts             Spawn reviewer, check for critical findings
+    close.ts              Spawn closer, extract PR URL
+    retrospective.ts      Spawn retrospective (awaited, runs to completion)
+  util/
+    parse-agent-result.ts Extract AGENT_RESULT JSON from agent output
+    run-script.ts         Safe execFile wrapper (no shell injection)
+    logger.ts             Structured JSON-lines to stderr
+```
+
+### Context Isolation
+
+Each agent receives only what it needs — not everything:
+
+- **Implementer**: task + issue + playbook + working memory + repo learnings + check fields
+- **Verifier**: task + repo path (deliberately minimal — fresh-context testing)
+- **Reviewer**: task + repo path (reads golden principles itself)
+- **Closer**: task + repo + verifier AGENT_RESULT + reviewer AGENT_RESULT
+
+## Model Configuration
+
+Each agent role can use a different model and provider. Configure via `~/.config/case/config.json`:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/workos/case/main/config.schema.json",
+  "models": {
+    "default": { "provider": "anthropic", "model": "claude-sonnet-4-20250514" },
+    "reviewer": { "provider": "google", "model": "gemini-2.5-pro" },
+    "retrospective": { "provider": "anthropic", "model": "claude-haiku-4-5-20251001" },
+    "verifier": null
+  }
+}
+```
+
+- **`default`** — used when a role has no specific config
+- **Role-specific** — set provider + model per agent (implementer, verifier, reviewer, closer, retrospective, orchestrator)
+- **`null`** — explicitly means "use default"
+- **Missing file** — all agents use Claude Sonnet (hardcoded default)
+- **`--model` flag** — overrides config for all agents in a single run
+
+Priority chain: `--model` CLI flag > explicit `spawnAgent` options > config file > hardcoded defaults.
+
+Pi's `ModelRegistry` supports 20+ providers (Anthropic, Google, OpenAI, local models, etc.) — any model ID that Pi recognizes works here.
 
 ## Self-Improvement
 
-After every pipeline run — success or failure — the retrospective agent analyzes what happened and **applies improvements directly** to the harness. It also maintains per-repo learnings in an [external repo](#3-set-up-environment-variables) so knowledge compounds across runs:
+After every pipeline run — success or failure — the retrospective agent analyzes what happened and **proposes improvements** to the harness (staged in `docs/proposed-amendments/` for human review). It also applies per-repo learnings directly so knowledge compounds across runs:
 
 ```mermaid
 graph LR
     A["Pipeline completes"] --> B["Retrospective reads progress log"]
     B --> C{"What went wrong?"}
-    C -->|missing pattern| D["Apply fix: docs/architecture/"]
-    C -->|unclear convention| E["Apply fix: docs/conventions/"]
-    C -->|agent skipped steps| F["Apply fix: agent prompt"]
-    C -->|hook too lenient| G["Apply fix: hook script"]
+    C -->|missing pattern| D["Propose: docs/architecture/"]
+    C -->|unclear convention| E["Propose: docs/conventions/"]
+    C -->|agent skipped steps| F["Propose: agent prompt change"]
+    C -->|hook too lenient| G["Propose: hook fix"]
     C -->|nothing| H["No improvements needed"]
-    D --> I["Update repo learnings (external repo)"]
+    D --> I["Apply repo learnings directly"]
     E --> I
     F --> I
     G --> I
     I --> J{"3+ similar learnings?"}
-    J -->|yes| K["Escalate to convention or golden principle"]
+    J -->|yes| K["Propose escalation to convention"]
     J -->|no| L["Done"]
 ```
 
-## Getting Started
+## Quick Start
 
-### 1. Fork the repo
-
-Case improves itself after every pipeline run — the retrospective agent edits harness files directly. Fork the repo so those improvements have somewhere to land and don't conflict with upstream.
-
-```bash
-gh repo fork workos/case --clone
-```
-
-Add upstream as a remote so you can pull future improvements:
-
-```bash
-cd case
-git remote add upstream git@github.com:workos/case.git
-```
-
-### 2. Set up the project manifest
-
-The project manifest (`projects.json`) tells case where your target repos live. It's gitignored so each user can customize paths without polluting the repo. Copy the example and edit it:
-
-```bash
-cp projects.example.json projects.json
-```
-
-The default paths assume target repos are siblings of case:
-
-```
-~/dev/
-  case/                       # this repo (your fork)
-  cli/main/                   # workos/workos-cli
-  skills/                     # workos/skills
-  authkit-session/            # workos/authkit-ssr
-  authkit-tanstack-start/     # workos/authkit-tanstack-start
-  authkit-nextjs/             # workos/authkit-nextjs
-```
-
-If your repos live elsewhere, edit the `path` field for each repo in `projects.json` — paths are resolved relative to the case directory and can point anywhere (e.g., `../../other/path/cli`).
-
-You only need entries for repos you plan to work in.
-
-### 3. Set up environment variables
-
-Some features require external GitHub repos for user-specific data. Set these in your shell profile or Claude Code settings:
-
-| Variable | Purpose | Required for |
-| --- | --- | --- |
-| `CASE_ASSETS_REPO` | GitHub repo for PR screenshots/videos (e.g., `youruser/case-assets`) | `scripts/upload-screenshot.sh` |
-| `CASE_LEARNINGS_REPO` | GitHub repo for per-repo tactical knowledge (e.g., `youruser/case-learnings`) | `scripts/read-learning.sh`, `scripts/write-learning.sh` |
-
-```bash
-# Create the repos
-gh repo create case-assets --public --description "PR screenshots and videos for case harness"
-gh repo create case-learnings --public --description "Per-repo tactical knowledge for case harness"
-
-# Add to your shell profile
-export CASE_ASSETS_REPO='youruser/case-assets'
-export CASE_LEARNINGS_REPO='youruser/case-learnings'
-```
-
-Both are optional — scripts fail fast with setup instructions if the env var is missing. The pipeline works without them, but you won't get screenshot uploads or accumulated learnings.
-
-### 4. Install the plugin
-
-```bash
-claude plugin marketplace add /path/to/case
-claude plugin install case
-```
-
-Restart Claude Code after installing. The `/case` skill will be available in all sessions.
-
-To update after changes:
-```bash
-claude plugin uninstall case && claude plugin marketplace update && claude plugin install case
-```
-
-### 5. Use with an issue
+### Use with an issue
 
 From any target repo:
 
@@ -178,13 +234,30 @@ If a `/case` run is interrupted, re-run the same command. The orchestrator detec
 /case 34
 ```
 
-### Use interactively
+### Interactive mode
+
+Start a conversational session with the case orchestrator:
 
 ```bash
-/case fix a bug where session cookies aren't being set correctly
+# Freeform — discuss, plan, explore before running anything
+ca --agent
+
+# Issue-directed — fetches the issue and presents context
+ca --agent 1234
 ```
 
-Loads harness context (landscape, conventions, playbooks) for the current task without the full pipeline.
+The session starts with the same detection as batch mode — it identifies the current repo, checks for active tasks, and fetches issue context. You see the full briefing before anything executes:
+
+```
+Repo: cli (/path/to/cli)
+
+Issue: Fix login bug
+Users cannot log in when cookies are disabled
+
+Ready to create a task and run the pipeline, or discuss first.
+```
+
+From there you can discuss approaches, ask questions, or tell the orchestrator to run the pipeline. Tools for fetching issues, creating tasks, running baselines, and executing the pipeline are all available through conversation.
 
 ## Task Tracking
 
@@ -214,27 +287,18 @@ cp tasks/templates/bug-fix.md tasks/active/authkit-nextjs-1-fix-cookie-bug.md
 # Edit the file — fill in {placeholders}
 
 # Hand it to an agent (use --worktree for isolation)
-claude --worktree -p "Execute the task in tasks/active/authkit-nextjs-1-fix-cookie-bug.md"
+ca --task tasks/active/authkit-nextjs-1-fix-cookie-bug.task.json
 ```
 
 ## Enforcement
 
-Case uses Claude Code hooks to mechanically enforce the pre-PR checklist. Hooks only activate during `/case` workflows (when `.case-active` marker exists).
+The pipeline enforces the pre-PR checklist through the closer agent's pre-flight checks and the programmatic orchestrator's phase gates. Evidence markers track that work was actually done:
 
-| Hook | Trigger | What it enforces |
-| --- | --- | --- |
-| `pre-pr-check.sh` | `gh pr create` | Evidence-based test markers (not bare `touch`), manual testing evidence if src/ changed, review evidence (`.case-reviewed` with `critical: 0`), verification notes in PR body, feature branch |
-| `pre-push-check.sh` | `git push` | Not pushing to main/master |
-| `pre-commit-check.sh` | `git commit` | Conventional commit format |
-| `post-pr-cleanup.sh` | `gh pr create` (after) | Updates task JSON status to `pr-opened`, cleans up markers |
-| `doom-loop-detect.sh` | Any Bash command (after) | Detects 3+ consecutive identical failures, forces agents to try a different approach |
-
-Evidence markers are created by scripts that verify work was actually done:
 - `mark-tested.sh` — requires piped test output, records SHA-256 hash. Supports structured JSON reporter input via `parse-test-output.sh`. Rejects bare `touch`.
 - `mark-manual-tested.sh` — requires recent Playwright screenshots. Rejects without evidence.
 - `mark-reviewed.sh` — requires `--critical 0` (no unresolved critical findings from reviewer). Rejects if critical findings exist.
 
-All marker scripts also update the task JSON as a side effect.
+The closer agent verifies all markers exist before attempting `gh pr create`. The pipeline limits retries to prevent doom loops. All marker scripts also update the task JSON as a side effect.
 
 ## Verification Tools
 
@@ -242,7 +306,7 @@ Agents verify their work using:
 
 - **Playwright CLI** — primary tool for front-end testing. Headless, scriptable, produces screenshots/video.
 - **Screenshot uploads** — `scripts/upload-screenshot.sh` pushes images to a GitHub release and returns markdown for PR bodies. Auto-converts video to animated GIF for inline GitHub rendering.
-- **Structured test output** — `scripts/parse-test-output.sh` parses vitest JSON reporter output into machine-readable evidence for `.case-tested` markers (pass/fail counts, duration, per-file breakdown).
+- **Structured test output** — `scripts/parse-test-output.sh` parses vitest JSON reporter output into machine-readable evidence for `.case/<task-slug>/tested` markers (pass/fail counts, duration, per-file breakdown).
 - **Session context** — `scripts/session-start.sh` gathers structured JSON context (branch, commits, task status, evidence markers) at the start of every agent's context window.
 - **Reviewer agent** — reviews the diff against golden principles and conventions. Critical findings block PR creation; warnings and info are posted as PR comments.
 - **Test credentials** — `~/.config/case/credentials` for sign-in flow testing.
@@ -265,7 +329,6 @@ bash scripts/bootstrap.sh cli
 ## What's in the Harness
 
 ```
-.claude-plugin/                     Plugin + marketplace manifests
 skills/
   case/SKILL.md                     /case skill (orchestrator + pipeline)
   security-auditor/SKILL.md         Security audit (auto-invoked, not user-facing)
@@ -275,18 +338,24 @@ agents/
   reviewer.md                       Subagent: diff review against golden principles
   closer.md                         Subagent: PR creation + hook satisfaction + review comments
   retrospective.md                  Subagent: apply harness improvements + maintain learnings
-hooks/
-  hooks.json                        Hook configuration
-  pre-pr-check.sh                   Block PR without evidence markers + review evidence
-  pre-push-check.sh                 Block push to main/master
-  pre-commit-check.sh               Enforce conventional commits
-  post-pr-cleanup.sh                Update task JSON status, clean markers
-  doom-loop-detect.sh               Detect repeated identical failures, break retry loops
+src/                                Programmatic orchestrator (TypeScript)
+  index.ts                          CLI entry point (--agent, --model, --task)
+  pipeline.ts                       Core while/switch loop (Steps 4-9)
+  agent/                            Pi-based agent infrastructure
+    pi-runner.ts                    Spawn Pi batch sessions per role
+    orchestrator-session.ts         Interactive Pi session (--agent mode)
+    config.ts                       Per-agent model config
+    tools/                          Orchestrator tools (pipeline, issue, task, baseline)
+  entry/                            CLI orchestrator (Steps 0-3)
+  phases/                           One module per pipeline phase
+  context/                          Role-specific prompt assembly
+  state/                            Task store + re-entry logic
+  util/                             Parser, script runner, logger
+config.schema.json                  JSON Schema for ~/.config/case/config.json
 
 AGENTS.md                           Entry point for agents (project landscape)
 CLAUDE.md                           How to improve case itself
-projects.example.json               Example manifest (copy to projects.json)
-projects.json                       Your local manifest (gitignored)
+projects.json                       Manifest of target repos
 
 docs/
   architecture/                     Canonical patterns per repo type
@@ -296,7 +365,7 @@ docs/
   playbooks/                        Step-by-step guides for recurring operations
   golden-principles.md              Enforced invariants across all repos
   philosophy.md                     Design principles guiding case (incl. context engineering)
-  learnings/README.md               Setup for external learnings repo (per-repo knowledge)
+  learnings/                        Per-repo tactical knowledge from retrospective
   ideation/                         Ideation artifacts (contracts, specs)
 
 tasks/
@@ -313,8 +382,6 @@ scripts/
   mark-manual-tested.sh             Evidence-based manual test marker
   mark-reviewed.sh                  Review evidence marker (requires critical: 0)
   upload-screenshot.sh              Upload images to GitHub for PR descriptions
-  read-learning.sh                  Read per-repo learnings from external repo
-  write-learning.sh                 Append learnings to external repo
   session-start.sh                  Session context for all agents (structured JSON)
   parse-test-output.sh              Parse vitest JSON reporter into structured evidence
   entropy-scan.sh                   Convention drift scanner across repos
@@ -322,15 +389,15 @@ scripts/
 
 ## Target Repos (v1)
 
-| Repo | Path | Purpose |
-| --- | --- | --- |
-| cli | `../cli/main` | WorkOS CLI |
-| skills | `../skills` | Claude Code skills plugin |
-| authkit-session | `../authkit-session` | Framework-agnostic session management |
-| authkit-tanstack-start | `../authkit-tanstack-start` | AuthKit TanStack Start SDK |
-| authkit-nextjs | `../authkit-nextjs` | AuthKit Next.js SDK |
+| Repo                   | Path                        | Purpose                               |
+| ---------------------- | --------------------------- | ------------------------------------- |
+| cli                    | `../cli/main`               | WorkOS CLI                            |
+| skills                 | `../skills`                 | WorkOS integration skills             |
+| authkit-session        | `../authkit-session`        | Framework-agnostic session management |
+| authkit-tanstack-start | `../authkit-tanstack-start` | AuthKit TanStack Start SDK            |
+| authkit-nextjs         | `../authkit-nextjs`         | AuthKit Next.js SDK                   |
 
-Default paths in `projects.example.json` assume sibling directories, but paths are configurable (see [Getting Started](#2-set-up-the-project-manifest)). The manifest and all tooling are designed to scale to 25+ repos. Add a new repo by appending to your `projects.json`.
+The manifest (`projects.json`) and all tooling are designed to scale to 25+ repos. Add a new repo by appending to `projects.json`.
 
 ## Philosophy
 
@@ -356,10 +423,10 @@ bash scripts/entropy-scan.sh
 bash scripts/entropy-scan.sh --repo cli
 ```
 
-For ongoing monitoring during work sessions, use Claude Code's `/loop` integration:
+For ongoing monitoring, run entropy scans periodically:
 
-```
-/loop 30m bash scripts/entropy-scan.sh
+```bash
+bash scripts/entropy-scan.sh
 ```
 
 See [docs/conventions/entropy-management.md](docs/conventions/entropy-management.md) for recommended intervals and details on what gets checked.
@@ -373,7 +440,7 @@ They're complementary. Case depends on skills for product knowledge.
 
 ## Adding a New Repo
 
-1. Add entry to your `projects.json` (follow `projects.schema.json`)
+1. Add entry to `projects.json` (follow the schema)
 2. Ensure the repo has a `CLAUDE.md` with: commands, architecture, do/don't, PR checklist
 3. Run `bash scripts/check.sh --repo <name>` to verify compliance
 4. Add architecture doc to `docs/architecture/` if the repo introduces a new pattern
